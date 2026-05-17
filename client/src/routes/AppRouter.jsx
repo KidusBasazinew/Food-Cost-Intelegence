@@ -3,8 +3,15 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { RequireAuth } from "@/features/auth/components/RequireAuth";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
+import { InventoryDashboardPage } from "@/features/inventory/pages/InventoryDashboardPage";
+import { InventoryItemDetailsPage } from "@/features/inventory/pages/InventoryItemDetailsPage";
+import { InventoryItemsPage } from "@/features/inventory/pages/InventoryItemsPage";
+import { InventoryTransactionsPage } from "@/features/inventory/pages/InventoryTransactionsPage";
+import { LowStockAlertsPage } from "@/features/inventory/pages/LowStockAlertsPage";
+import { MeasurementUnitsAdminPage } from "@/features/inventory/pages/MeasurementUnitsAdminPage";
+import { PurchaseManagementPage } from "@/features/inventory/pages/PurchaseManagementPage";
+import { SupplierManagementPage } from "@/features/inventory/pages/SupplierManagementPage";
 import { DashboardHomePage } from "@/pages/DashboardHomePage";
-import { InventoryPage } from "@/pages/InventoryPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { RecipesPage } from "@/pages/RecipesPage";
@@ -21,16 +28,38 @@ export function AppRouter() {
         <Route element={<RequireAuth />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardHomePage />} />
-            <Route path="/inventory" element={<InventoryPage />} />
+            <Route
+              path="/inventory"
+              element={<Navigate to="/inventory/dashboard" replace />}
+            />
+            <Route
+              path="/inventory/dashboard"
+              element={<InventoryDashboardPage />}
+            />
+            <Route path="/inventory/items" element={<InventoryItemsPage />} />
+            <Route
+              path="/inventory/measurement-units"
+              element={<MeasurementUnitsAdminPage />}
+            />
+            <Route
+              path="/inventory/items/:id"
+              element={<InventoryItemDetailsPage />}
+            />
+            <Route
+              path="/inventory/transactions"
+              element={<InventoryTransactionsPage />}
+            />
+            <Route
+              path="/inventory/low-stock"
+              element={<LowStockAlertsPage />}
+            />
             <Route path="/recipes" element={<RecipesPage />} />
             <Route
               path="/food-cost"
               element={<PlaceholderPage title="Food Cost" />}
             />
-            <Route
-              path="/purchases"
-              element={<PlaceholderPage title="Purchases" />}
-            />
+            <Route path="/purchases" element={<PurchaseManagementPage />} />
+            <Route path="/suppliers" element={<SupplierManagementPage />} />
             <Route
               path="/reports"
               element={<PlaceholderPage title="Reports" />}

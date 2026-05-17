@@ -50,6 +50,10 @@ model Hotel {
 
   branches Branch[]
   users    User[]
+  inventoryItems        InventoryItem[]
+  inventoryTransactions InventoryTransaction[]
+  suppliers             Supplier[]
+  purchases              Purchase[]
 
   @@index([status])
   @@index([createdAt])
@@ -68,6 +72,10 @@ model Branch {
 
   hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   users User[]
+  inventoryItems        InventoryItem[]
+  inventoryTransactions InventoryTransaction[]
+  suppliers             Supplier[]
+  purchases              Purchase[]
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -92,6 +100,8 @@ model User {
   hotel        Hotel        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   refreshTokens RefreshToken[]
+  inventoryTransactionsCreated InventoryTransaction[] @relation("InventoryTransactionCreatedBy")
+  purchasesCreated              Purchase[]            @relation("PurchaseCreatedBy")
 
   @@index([hotelId])
   @@index([branchId])
@@ -120,4 +130,189 @@ model RefreshToken {
   @@index([expiresAt])
   @@index([revokedAt])
   @@index([createdAt])
+}
+
+// =====================================================
+// Stage 3 — Inventory Foundation + Measurement Units + Purchases
+// =====================================================
+
+enum InventoryCategory {
+  PRODUCE
+  MEAT
+  SEAFOOD
+  DAIRY
+  DRY_GOODS
+  BEVERAGES
+  SPICES
+  BAKERY
+  PACKAGING
+  CLEANING
+  OTHER
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  ADJUSTMENT
+  WASTE
+  CONSUMPTION
+  TRANSFER
+}
+
+enum PurchaseStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum MeasurementBaseType {
+  G
+  ML
+  PIECE
+}
+
+model MeasurementUnit {
+  id               String              @id @default(uuid())
+  name             String
+  symbol           String
+  baseType         MeasurementBaseType
+  conversionFactor Decimal             @default(1)
+  isBaseUnit       Boolean             @default(false)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  inventoryItems   InventoryItem[]     @relation("InventoryItemBaseUnit")
+  inventoryTxns    InventoryTransaction[]
+  purchaseItems    PurchaseItem[]
+
+  @@unique([baseType, symbol])
+  @@index([baseType])
+  @@index([isBaseUnit])
+}
+
+model InventoryItem {
+  id                        String            @id @default(uuid())
+  hotelId                   String
+  branchId                  String?
+  name                      String
+  sku                       String?
+  category                  InventoryCategory @default(OTHER)
+  baseUnitId                String
+  quantityInStock           Decimal           @default(0)
+  averageCostPerBaseUnitCents Decimal          @default(0)
+  minimumStockLevel         Decimal           @default(0)
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+
+  hotel       Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch      Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  baseUnit    MeasurementUnit  @relation("InventoryItemBaseUnit", fields: [baseUnitId], references: [id], onDelete: Restrict)
+  transactions InventoryTransaction[]
+  purchaseItems PurchaseItem[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model InventoryTransaction {
+  id                     String                   @id @default(uuid())
+  hotelId                String
+  branchId               String?
+  inventoryItemId        String
+  type                   InventoryTransactionType
+  quantity               Decimal
+  unitId                 String
+  quantityInBaseUnit     Decimal
+  unitCostPerBaseUnitCents Decimal?
+  totalCostCents         Decimal?
+  referenceType          String?
+  referenceId            String?
+  note                   String?
+  createdByUserId        String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  hotel         Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch        Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  inventoryItem InventoryItem    @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  unit          MeasurementUnit  @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  createdBy     User?            @relation("InventoryTransactionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([inventoryItemId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  hotelId   String
+  branchId  String?
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel     Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  purchases Purchase[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([createdAt])
+}
+
+model Purchase {
+  id            String        @id @default(uuid())
+  hotelId       String
+  branchId      String?
+  supplierId    String
+  status        PurchaseStatus @default(DRAFT)
+  orderedAt     DateTime?
+  expectedAt    DateTime?
+  receivedAt    DateTime?
+  notes         String?
+  createdByUserId String?
+  subtotalCents Decimal       @default(0)
+  taxCents      Decimal       @default(0)
+  totalCents    Decimal       @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  hotel     Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  supplier  Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  createdBy User?     @relation("PurchaseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  items     PurchaseItem[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PurchaseItem {
+  id               String   @id @default(uuid())
+  purchaseId       String
+  inventoryItemId  String
+  unitId           String
+  quantity         Decimal
+  quantityInBaseUnit Decimal
+  unitCostCents    Decimal
+  totalCostCents   Decimal
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  purchase      Purchase        @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  unit          MeasurementUnit @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseId])
+  @@index([inventoryItemId])
 }
