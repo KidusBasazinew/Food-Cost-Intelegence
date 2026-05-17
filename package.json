@@ -1,0 +1,25 @@
+{
+  "name": "food-cost-intelligence-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hospitality ERP + Food Cost Intelligence Platform (monorepo foundation)",
+  "type": "commonjs",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n client,server -c cyan,magenta \"npm -w client run dev\" \"npm -w server run dev\"",
+    "dev:client": "npm -w client run dev",
+    "dev:server": "npm -w server run dev",
+    "build": "npm -w client run build",
+    "preview": "npm -w client run preview",
+    "lint": "npm -w client run lint",
+    "prisma:generate": "npm -w server run prisma:generate",
+    "prisma:migrate": "npm -w server run prisma:migrate",
+    "prisma:studio": "npm -w server run prisma:studio"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================
+// Stage 2 — Database Foundation + Auth + Core ERP Base
+// =====================================================
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum HotelStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Hotel {
+  id        String      @id @default(uuid())
+  name      String
+  slug      String      @unique
+  email     String?
+  phone     String?
+  address   String?
+  city      String?
+  country   String?
+  logoUrl   String?
+  status    HotelStatus @default(ACTIVE)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  branches Branch[]
+  users    User[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Branch {
+  id        String       @id @default(uuid())
+  hotelId   String
+  name      String
+  code      String
+  address   String?
+  phone     String?
+  status    BranchStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  users User[]
+
+  @@unique([hotelId, code])
+  @@index([hotelId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model User {
+  id           String     @id @default(uuid())
+  hotelId      String
+  branchId     String?
+  firstName    String
+  lastName     String
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(STAFF)
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  hotel        Hotel        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  refreshTokens RefreshToken[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model RefreshToken {
+  id                String    @id @default(uuid())
+  userId            String
+  tokenHash         String    @unique
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?   @unique
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  ipAddress         String?
+  userAgent         String?
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedByToken RefreshToken? @relation("RefreshTokenRotation", fields: [replacedByTokenId], references: [id], onDelete: SetNull)
+  replacesToken   RefreshToken? @relation("RefreshTokenRotation")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@index([createdAt])
+}
