@@ -11,10 +11,16 @@ import { LowStockAlertsPage } from "@/features/inventory/pages/LowStockAlertsPag
 import { MeasurementUnitsAdminPage } from "@/features/inventory/pages/MeasurementUnitsAdminPage";
 import { PurchaseManagementPage } from "@/features/inventory/pages/PurchaseManagementPage";
 import { SupplierManagementPage } from "@/features/inventory/pages/SupplierManagementPage";
+import { RecipeBuilderPage } from "@/features/recipes/pages/RecipeBuilderPage";
+import { RecipeDetailsPage } from "@/features/recipes/pages/RecipeDetailsPage";
+import { RecipeManagementPage } from "@/features/recipes/pages/RecipeManagementPage";
+import { FoodCostDashboardPage } from "@/features/intelligence/pages/FoodCostDashboardPage";
+import { InventoryConsumptionDashboardPage } from "@/features/intelligence/pages/InventoryConsumptionDashboardPage";
+import { WasteAnalyticsPage } from "@/features/intelligence/pages/WasteAnalyticsPage";
+import { ProfitabilityReportsPage } from "@/features/intelligence/pages/ProfitabilityReportsPage";
 import { DashboardHomePage } from "@/pages/DashboardHomePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
-import { RecipesPage } from "@/pages/RecipesPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 
 export function AppRouter() {
@@ -53,10 +59,21 @@ export function AppRouter() {
               path="/inventory/low-stock"
               element={<LowStockAlertsPage />}
             />
-            <Route path="/recipes" element={<RecipesPage />} />
+            <Route path="/recipes" element={<RecipeManagementPage />} />
+            <Route path="/recipes/:id" element={<RecipeDetailsPage />} />
             <Route
-              path="/food-cost"
-              element={<PlaceholderPage title="Food Cost" />}
+              path="/recipes/:id/builder"
+              element={<RecipeBuilderPage />}
+            />
+            <Route path="/food-cost" element={<FoodCostDashboardPage />} />
+            <Route
+              path="/consumption"
+              element={<InventoryConsumptionDashboardPage />}
+            />
+            <Route path="/waste" element={<WasteAnalyticsPage />} />
+            <Route
+              path="/profitability"
+              element={<ProfitabilityReportsPage />}
             />
             <Route path="/purchases" element={<PurchaseManagementPage />} />
             <Route path="/suppliers" element={<SupplierManagementPage />} />

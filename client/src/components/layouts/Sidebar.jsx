@@ -7,6 +7,8 @@ import {
   Receipt,
   Settings,
   ShoppingCart,
+  TrendingUp,
+  Trash2,
   Users,
   UtensilsCrossed,
 } from "lucide-react";
@@ -19,6 +21,9 @@ const nav = [
   { to: "/inventory", label: "Inventory", icon: Package },
   { to: "/recipes", label: "Recipes", icon: ClipboardList },
   { to: "/food-cost", label: "Food Cost", icon: UtensilsCrossed },
+  { to: "/consumption", label: "Consumption", icon: LineChart },
+  { to: "/waste", label: "Waste", icon: Trash2 },
+  { to: "/profitability", label: "Profitability", icon: TrendingUp },
   { to: "/purchases", label: "Purchases", icon: ShoppingCart },
   { to: "/reports", label: "Reports", icon: Receipt },
   { to: "/employees", label: "Employees", icon: Users },
