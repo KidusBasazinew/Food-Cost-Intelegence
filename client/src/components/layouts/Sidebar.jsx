@@ -39,11 +39,11 @@ export function Sidebar() {
     <div className="flex h-dvh flex-col">
       <div className={cn("border-b", collapsed ? "p-4" : "p-5")}>
         <div className="text-sm font-medium tracking-wide">
-          {collapsed ? "ERP" : "Hospitality ERP"}
+          {collapsed ? "ERP" : "Food Ops ERP"}
         </div>
         {collapsed ? null : (
           <div className="text-xs text-muted-foreground">
-            Food Cost Intelligence
+            Executive Kitchen Intelligence
           </div>
         )}
       </div>
@@ -79,7 +79,7 @@ export function Sidebar() {
           collapsed ? "p-3" : "p-4",
         )}
       >
-        {collapsed ? "Foundation" : "Foundation shell (no features yet)"}
+        {collapsed ? "BI" : "Food operations BI"}
       </div>
     </div>
   );

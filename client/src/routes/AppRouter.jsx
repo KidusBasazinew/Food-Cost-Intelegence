@@ -22,6 +22,8 @@ import { DashboardHomePage } from "@/pages/DashboardHomePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { ExecutiveFoodOpsDashboardPage } from "@/features/analytics/pages/ExecutiveFoodOpsDashboardPage";
+import { ReportsPage } from "@/features/analytics/pages/ReportsPage";
 
 export function AppRouter() {
   return (
@@ -77,17 +79,14 @@ export function AppRouter() {
             />
             <Route path="/purchases" element={<PurchaseManagementPage />} />
             <Route path="/suppliers" element={<SupplierManagementPage />} />
-            <Route
-              path="/reports"
-              element={<PlaceholderPage title="Reports" />}
-            />
+            <Route path="/reports" element={<ReportsPage />} />
             <Route
               path="/employees"
               element={<PlaceholderPage title="Employees" />}
             />
             <Route
               path="/analytics"
-              element={<PlaceholderPage title="Analytics" />}
+              element={<ExecutiveFoodOpsDashboardPage />}
             />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>

@@ -11,6 +11,13 @@ import { recipeIngredientsRouter } from "./recipeIngredients.routes.js";
 import { inventoryConsumptionRouter } from "./inventoryConsumption.routes.js";
 import { foodCostRouter } from "./foodCost.routes.js";
 import { wasteRouter } from "./waste.routes.js";
+import { analyticsExecutiveRouter } from "./analyticsExecutive.routes.js";
+import { analyticsFoodCostRouter } from "./analyticsFoodCost.routes.js";
+import { analyticsMenuEngineeringRouter } from "./analyticsMenuEngineering.routes.js";
+import { analyticsWasteRouter } from "./analyticsWaste.routes.js";
+import { analyticsInventoryRouter } from "./analyticsInventory.routes.js";
+import { analyticsSuppliersRouter } from "./analyticsSuppliers.routes.js";
+import { reportsRouter } from "./reports.routes.js";
 
 export const apiRouter = Router();
 
@@ -25,3 +32,12 @@ apiRouter.use("/recipe-ingredients", recipeIngredientsRouter);
 apiRouter.use("/inventory-consumption", inventoryConsumptionRouter);
 apiRouter.use("/food-cost", foodCostRouter);
 apiRouter.use("/waste", wasteRouter);
+
+// Stage 5 — Executive Food Operations BI
+apiRouter.use("/analytics/executive", analyticsExecutiveRouter);
+apiRouter.use("/analytics/food-cost", analyticsFoodCostRouter);
+apiRouter.use("/analytics/menu-engineering", analyticsMenuEngineeringRouter);
+apiRouter.use("/analytics/waste", analyticsWasteRouter);
+apiRouter.use("/analytics/inventory", analyticsInventoryRouter);
+apiRouter.use("/analytics/suppliers", analyticsSuppliersRouter);
+apiRouter.use("/reports", reportsRouter);

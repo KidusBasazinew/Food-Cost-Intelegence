@@ -56,6 +56,7 @@ model Hotel {
   purchases              Purchase[]
   recipes               Recipe[]
   inventoryConsumptions InventoryConsumption[]
+  salesOrders           SalesOrder[]
 
   @@index([status])
   @@index([createdAt])
@@ -80,6 +81,9 @@ model Branch {
   purchases              Purchase[]
   recipes               Recipe[]
   inventoryConsumptions InventoryConsumption[]
+  salesOrders           SalesOrder[]
+  menuAnalyticsSnapshots MenuAnalyticsSnapshot[]
+  inventoryForecastSnapshots InventoryForecastSnapshot[]
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -233,6 +237,7 @@ model InventoryItem {
   purchaseItems PurchaseItem[]
   recipeIngredients RecipeIngredient[]
   consumptions InventoryConsumption[]
+  inventoryForecastSnapshots InventoryForecastSnapshot[]
 
   @@index([hotelId])
   @@index([branchId])
@@ -264,6 +269,8 @@ model Recipe {
 
   ingredients  RecipeIngredient[]
   consumptions InventoryConsumption[]
+  salesOrderItems SalesOrderItem[]
+  menuAnalyticsSnapshots MenuAnalyticsSnapshot[]
 
   @@index([hotelId])
   @@index([branchId])
@@ -423,4 +430,111 @@ model PurchaseItem {
 
   @@index([purchaseId])
   @@index([inventoryItemId])
+}
+
+// =====================================================
+// Stage 5 — Executive Food Operations BI + Analytics Snapshots
+// =====================================================
+
+enum MenuEngineeringCategory {
+  STAR
+  PUZZLE
+  PLOWHORSE
+  DOG
+}
+
+enum AnalyticsPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum SalesOrderStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+model SalesOrder {
+  id        String           @id @default(uuid())
+  hotelId   String
+  branchId  String?
+  status    SalesOrderStatus @default(COMPLETED)
+  orderedAt DateTime         @default(now())
+  totalRevenueCents Decimal  @default(0)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  items  SalesOrderItem[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([status])
+  @@index([orderedAt])
+  @@index([createdAt])
+}
+
+model SalesOrderItem {
+  id            String   @id @default(uuid())
+  salesOrderId  String
+  recipeId      String
+  quantity      Decimal
+  unitPriceCents Decimal
+  totalRevenueCents Decimal
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+
+  @@index([salesOrderId])
+  @@index([recipeId])
+  @@index([createdAt])
+}
+
+model MenuAnalyticsSnapshot {
+  id                       String                  @id @default(uuid())
+  menuItemId               String
+  branchId                 String
+  period                   AnalyticsPeriod
+  snapshotDate             DateTime
+  totalSalesCount          Decimal                 @default(0)
+  totalRevenueCents        Decimal                 @default(0)
+  totalIngredientCostCents Decimal                 @default(0)
+  totalProfitCents         Decimal                 @default(0)
+  foodCostPercentage       Decimal                 @default(0)
+  grossMarginPercentage    Decimal                 @default(0)
+  engineeringCategory      MenuEngineeringCategory
+  createdAt                DateTime                @default(now())
+
+  menuItem Recipe @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, branchId, period, snapshotDate])
+  @@index([branchId])
+  @@index([period])
+  @@index([snapshotDate])
+  @@index([createdAt])
+}
+
+model InventoryForecastSnapshot {
+  id                    String   @id @default(uuid())
+  inventoryItemId       String
+  branchId              String
+  averageDailyConsumption Decimal @default(0)
+  estimatedDaysRemaining Decimal @default(0)
+  projectedWeeklyUsage  Decimal @default(0)
+  projectedMonthlyUsage Decimal @default(0)
+  createdAt             DateTime @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryItemId])
+  @@index([branchId])
+  @@index([createdAt])
 }
