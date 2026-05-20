@@ -1,15 +1,32 @@
 import { useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useInventoryItemsQuery } from "@/features/inventory/hooks/useInventoryItems";
 import { useMeasurementUnitsQuery } from "@/features/inventory/hooks/useMeasurementUnits";
 import {
   useLogWasteMutation,
   useWasteReportQuery,
 } from "@/features/intelligence/hooks/useWaste";
+import {
+  AnalyticsCard,
+  DataTable,
+  DialogForm,
+  FormField,
+  FormSection,
+  InsightPanel,
+  KpiCard,
+  PageHeader,
+  PageShell,
+} from "@/components/ui/erp";
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -19,36 +36,38 @@ function toNumber(value) {
 }
 
 function formatMoney(cents) {
-  const v = toNumber(cents) / 100;
-  return v.toLocaleString(undefined, {
+  return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
   });
 }
 
+const EMPTY_FORM = {
+  inventoryItemId: "",
+  unitId: "",
+  quantity: "",
+  notes: "",
+};
+
 export function WasteAnalyticsPage() {
   const itemsQuery = useInventoryItemsQuery();
   const unitsQuery = useMeasurementUnitsQuery();
-
   const reportQuery = useWasteReportQuery({});
   const logMutation = useLogWasteMutation();
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+
   const items = itemsQuery.data || [];
   const units = unitsQuery.data || [];
+  const report = reportQuery.data;
 
   const itemById = useMemo(() => {
     const m = new Map();
     for (const i of items) m.set(i.id, i);
     return m;
   }, [items]);
-
-  const [form, setForm] = useState({
-    inventoryItemId: "",
-    unitId: "",
-    quantity: "",
-    notes: "",
-  });
 
   const selectedItem = form.inventoryItemId
     ? itemById.get(form.inventoryItemId)
@@ -65,169 +84,160 @@ export function WasteAnalyticsPage() {
     toNumber(form.quantity) > 0 &&
     !logMutation.isPending;
 
-  async function onSubmit(e) {
-    e.preventDefault();
+  async function onSubmit() {
     if (!canSubmit) return;
-
     await logMutation.mutateAsync({
       inventoryItemId: form.inventoryItemId,
       unitId: form.unitId,
       quantity: form.quantity,
       notes: form.notes.trim() ? form.notes.trim() : undefined,
     });
-
-    setForm({ inventoryItemId: "", unitId: "", quantity: "", notes: "" });
+    setForm(EMPTY_FORM);
+    setDialogOpen(false);
   }
 
-  const report = reportQuery.data;
+  const totalWasteCost = (report?.items || []).reduce(
+    (acc, i) => acc + toNumber(i.totalCostCents),
+    0,
+  );
+
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Item",
+        cell: ({ getValue }) => (
+          <span className="font-medium">{getValue()}</span>
+        ),
+      },
+      { accessorKey: "count", header: "Entries" },
+      {
+        id: "qty",
+        header: "Quantity (base)",
+        cell: ({ row }) =>
+          `${toNumber(row.original.totalQuantityBaseUnit).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${row.original.baseUnitSymbol}`,
+      },
+      {
+        id: "cost",
+        header: "Waste cost",
+        cell: ({ row }) => (
+          <span className="font-medium text-rose-600 dark:text-rose-400">
+            {formatMoney(row.original.totalCostCents)}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="text-sm font-medium">Waste Analytics</div>
-        <div className="mt-1 text-sm text-muted-foreground">
-          Log kitchen waste and track cost impact.
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Waste Analytics"
+        subtitle="Log kitchen waste and track cost impact on food operations."
+        actions={
+          <Button className="rounded-xl" onClick={() => setDialogOpen(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Log waste
+          </Button>
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Log waste</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-4">
-            <div className="md:col-span-2">
-              <div className="text-xs text-muted-foreground">
-                Inventory item
-              </div>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                value={form.inventoryItemId}
-                onChange={(e) => {
-                  const nextId = e.target.value;
-                  const nextItem = nextId ? itemById.get(nextId) : null;
-                  setForm((f) => ({
-                    ...f,
-                    inventoryItemId: nextId,
-                    unitId: nextItem?.baseUnitId ?? "",
-                  }));
-                }}
-              >
-                <option value="">Select…</option>
+      <InsightPanel variant="warning" title="Cost impact">
+        Every waste entry deducts inventory and records the financial loss at
+        current weighted average cost.
+      </InsightPanel>
+
+      <KpiCard
+        label="Total waste loss"
+        value={formatMoney(totalWasteCost)}
+        icon={Trash2}
+        accent="rose"
+        loading={reportQuery.isLoading}
+        hint={`${(report?.items || []).length} items tracked`}
+      />
+
+      <AnalyticsCard title="Waste report" description="By ingredient" accent="rose">
+        <DataTable
+          columns={columns}
+          data={(report?.items || []).slice(0, 50)}
+          loading={reportQuery.isLoading}
+          enableSearch={false}
+          pageSize={12}
+          emptyTitle="No waste records yet"
+          emptyDescription="Log your first waste entry to start tracking losses."
+        />
+      </AnalyticsCard>
+
+      <DialogForm
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="Log waste"
+        description="Record spoiled or discarded inventory."
+        onSubmit={onSubmit}
+        submitLabel="Log waste"
+        loading={logMutation.isPending}
+        size="lg"
+      >
+        <FormSection title="Waste entry">
+          <FormField label="Inventory item" fullWidth>
+            <Select
+              value={form.inventoryItemId}
+              onValueChange={(v) => {
+                const nextItem = v ? itemById.get(v) : null;
+                setForm((f) => ({
+                  ...f,
+                  inventoryItemId: v,
+                  unitId: nextItem?.baseUnitId ?? "",
+                }));
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select item…" />
+              </SelectTrigger>
+              <SelectContent>
                 {items.map((i) => (
-                  <option key={i.id} value={i.id}>
+                  <SelectItem key={i.id} value={i.id}>
                     {i.name} (base: {i.baseUnit?.symbol})
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground">Unit</div>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                value={form.unitId}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, unitId: e.target.value }))
-                }
-                disabled={!selectedItem}
-              >
-                <option value="">Select…</option>
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Unit">
+            <Select
+              value={form.unitId}
+              onValueChange={(v) => setForm((f) => ({ ...f, unitId: v }))}
+              disabled={!selectedItem}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select unit…" />
+              </SelectTrigger>
+              <SelectContent>
                 {allowedUnits.map((u) => (
-                  <option key={u.id} value={u.id}>
+                  <SelectItem key={u.id} value={u.id}>
                     {u.name} ({u.symbol})
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground">Quantity</div>
-              <Input
-                value={form.quantity}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, quantity: e.target.value }))
-                }
-                placeholder="e.g. 0.5"
-              />
-            </div>
-
-            <div className="md:col-span-4">
-              <div className="text-xs text-muted-foreground">
-                Notes (optional)
-              </div>
-              <Input
-                value={form.notes}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, notes: e.target.value }))
-                }
-                placeholder="e.g. spoiled during prep"
-              />
-            </div>
-
-            <div className="md:col-span-4">
-              <Button type="submit" disabled={!canSubmit}>
-                {logMutation.isPending ? "Logging…" : "Log waste"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Waste report</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Item</th>
-                  <th className="py-2">Rows</th>
-                  <th className="py-2">Quantity (base)</th>
-                  <th className="py-2">Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={4}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : (report?.items || []).length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={4}>
-                      No waste records yet.
-                    </td>
-                  </tr>
-                ) : (
-                  report.items.slice(0, 12).map((i) => (
-                    <tr
-                      key={i.inventoryItemId}
-                      className="border-b last:border-b-0"
-                    >
-                      <td className="py-2 font-medium">{i.name}</td>
-                      <td className="py-2">{i.count}</td>
-                      <td className="py-2">
-                        {toNumber(i.totalQuantityBaseUnit).toLocaleString(
-                          undefined,
-                          {
-                            maximumFractionDigits: 4,
-                          },
-                        )}{" "}
-                        {i.baseUnitSymbol}
-                      </td>
-                      <td className="py-2">{formatMoney(i.totalCostCents)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Quantity">
+            <Input
+              value={form.quantity}
+              onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+              placeholder="e.g. 0.5"
+            />
+          </FormField>
+          <FormField label="Notes (optional)" fullWidth>
+            <Input
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              placeholder="e.g. spoiled during prep"
+            />
+          </FormField>
+        </FormSection>
+      </DialogForm>
+    </PageShell>
   );
 }

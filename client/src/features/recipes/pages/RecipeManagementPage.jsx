@@ -1,15 +1,32 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ChefHat, Plus } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useMeasurementUnitsQuery } from "@/features/inventory/hooks/useMeasurementUnits";
 import {
   useCreateRecipeMutation,
   useRecipesQuery,
 } from "@/features/recipes/hooks/useRecipes";
+import {
+  DataTable,
+  DialogForm,
+  FormField,
+  FormSection,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+  StatusBadge,
+} from "@/components/ui/erp";
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -19,39 +36,36 @@ function toNumber(value) {
 }
 
 function formatMoney(cents) {
-  const v = toNumber(cents) / 100;
-  return v.toLocaleString(undefined, {
+  return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
   });
 }
 
+const EMPTY_FORM = {
+  name: "",
+  yieldQuantity: "1",
+  yieldUnitId: "",
+  sellingPriceCents: "0",
+  status: "ACTIVE",
+};
+
 export function RecipeManagementPage() {
   const recipesQuery = useRecipesQuery();
   const unitsQuery = useMeasurementUnitsQuery();
-
   const createMutation = useCreateRecipeMutation();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const units = useMemo(() => unitsQuery.data || [], [unitsQuery.data]);
-
-  const [form, setForm] = useState({
-    name: "",
-    yieldQuantity: "1",
-    yieldUnitId: "",
-    sellingPriceCents: "0",
-    status: "ACTIVE",
-  });
+  const recipes = recipesQuery.data || [];
 
   const canSubmit =
-    form.name.trim().length > 0 &&
-    form.yieldUnitId &&
-    !createMutation.isPending;
+    form.name.trim().length > 0 && form.yieldUnitId && !createMutation.isPending;
 
-  async function onSubmit(e) {
-    e.preventDefault();
+  async function onSubmit() {
     if (!canSubmit) return;
-
     await createMutation.mutateAsync({
       name: form.name.trim(),
       yieldQuantity: form.yieldQuantity,
@@ -59,191 +73,214 @@ export function RecipeManagementPage() {
       sellingPriceCents: form.sellingPriceCents,
       status: form.status,
     });
-
-    setForm((f) => ({ ...f, name: "" }));
+    setForm((f) => ({ ...EMPTY_FORM, yieldUnitId: f.yieldUnitId }));
+    setDialogOpen(false);
   }
 
-  const recipes = recipesQuery.data || [];
+  const activeCount = recipes.filter((r) => r.status === "ACTIVE").length;
+  const avgMargin =
+    recipes.length > 0
+      ? recipes.reduce((a, r) => a + toNumber(r.estimatedProfitMargin), 0) /
+        recipes.length
+      : 0;
+
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Recipe",
+        cell: ({ row }) => (
+          <div>
+            <Link
+              className="font-medium text-primary hover:underline"
+              to={`/recipes/${row.original.id}`}
+            >
+              {row.original.name}
+            </Link>
+            <div className="text-xs text-muted-foreground">
+              Updated {new Date(row.original.updatedAt).toLocaleString()}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "yield",
+        header: "Yield",
+        cell: ({ row }) =>
+          `${toNumber(row.original.yieldQuantity)} ${row.original.yieldUnit?.symbol}`,
+      },
+      {
+        id: "ingredients",
+        header: "Ingredients",
+        cell: ({ row }) => row.original._count?.ingredients ?? 0,
+      },
+      {
+        id: "cost",
+        header: "Total cost",
+        cell: ({ row }) => formatMoney(row.original.totalCostCents),
+      },
+      {
+        id: "selling",
+        header: "Selling",
+        cell: ({ row }) => formatMoney(row.original.sellingPriceCents),
+      },
+      {
+        id: "margin",
+        header: "Margin",
+        cell: ({ row }) => {
+          const m = toNumber(row.original.estimatedProfitMargin);
+          return (
+            <span
+              className={
+                m < 10
+                  ? "font-medium text-amber-600 dark:text-amber-400"
+                  : "font-medium text-emerald-600 dark:text-emerald-400"
+              }
+            >
+              {m.toLocaleString(undefined, { maximumFractionDigits: 2 })}%
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ getValue }) => (
+          <StatusBadge
+            status={getValue() === "ACTIVE" ? "active" : "inactive"}
+            label={getValue()}
+          />
+        ),
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => (
+          <Button asChild size="sm" variant="secondary" className="rounded-lg">
+            <Link to={`/recipes/${row.original.id}/builder`}>Builder</Link>
+          </Button>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-medium">Recipe Management</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Build recipes from inventory items. Costs update dynamically from
-            weighted average inventory costing.
-          </div>
-        </div>
-        <Button asChild variant="outline">
-          <Link to="/food-cost">Food cost dashboard</Link>
-        </Button>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Recipe Management"
+        subtitle="Build recipes from inventory items. Costs update dynamically from weighted average costing."
+        actions={
+          <>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/food-cost">Food cost</Link>
+            </Button>
+            <Button className="rounded-xl" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create recipe
+            </Button>
+          </>
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Create Recipe</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-6">
-            <div className="md:col-span-2">
-              <div className="text-xs text-muted-foreground">Name</div>
-              <Input
-                value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
-                placeholder="e.g. Chicken Stew"
-              />
-            </div>
+      <KpiGrid cols={3}>
+        <KpiCard
+          label="Total recipes"
+          value={recipes.length}
+          icon={ChefHat}
+          accent="purple"
+          loading={recipesQuery.isLoading}
+        />
+        <KpiCard
+          label="Active"
+          value={activeCount}
+          accent="emerald"
+          loading={recipesQuery.isLoading}
+        />
+        <KpiCard
+          label="Avg margin"
+          value={`${avgMargin.toLocaleString(undefined, { maximumFractionDigits: 1 })}%`}
+          accent="indigo"
+          loading={recipesQuery.isLoading}
+        />
+      </KpiGrid>
 
-            <div>
-              <div className="text-xs text-muted-foreground">Yield Qty</div>
-              <Input
-                value={form.yieldQuantity}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, yieldQuantity: e.target.value }))
-                }
-                placeholder="1"
-              />
-            </div>
+      <DataTable
+        columns={columns}
+        data={recipes}
+        loading={recipesQuery.isLoading}
+        searchPlaceholder="Search recipes…"
+        emptyTitle="No recipes yet"
+        emptyDescription="Create a recipe and open the builder to add ingredients."
+      />
 
-            <div>
-              <div className="text-xs text-muted-foreground">Yield Unit</div>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                value={form.yieldUnitId}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, yieldUnitId: e.target.value }))
-                }
-              >
-                <option value="">Select…</option>
+      <DialogForm
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="Create recipe"
+        description="Define yield and selling price. Add ingredients in the builder."
+        onSubmit={onSubmit}
+        submitLabel="Create recipe"
+        loading={createMutation.isPending}
+        size="lg"
+      >
+        <FormSection title="Recipe details">
+          <FormField label="Name" fullWidth>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. Chicken Stew"
+            />
+          </FormField>
+          <FormField label="Yield quantity">
+            <Input
+              value={form.yieldQuantity}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, yieldQuantity: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Yield unit">
+            <Select
+              value={form.yieldUnitId}
+              onValueChange={(v) => setForm((f) => ({ ...f, yieldUnitId: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select unit…" />
+              </SelectTrigger>
+              <SelectContent>
                 {units.map((u) => (
-                  <option key={u.id} value={u.id}>
+                  <SelectItem key={u.id} value={u.id}>
                     {u.name} ({u.symbol})
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground">
-                Selling Price (cents)
-              </div>
-              <Input
-                value={form.sellingPriceCents}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, sellingPriceCents: e.target.value }))
-                }
-                placeholder="0"
-              />
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground">Status</div>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                value={form.status}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, status: e.target.value }))
-                }
-              >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-6">
-              <Button type="submit" disabled={!canSubmit}>
-                {createMutation.isPending ? "Creating…" : "Create recipe"}
-              </Button>
-              {unitsQuery.isLoading && (
-                <span className="ml-3 text-xs text-muted-foreground">
-                  Loading measurement units…
-                </span>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Recipes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Name</th>
-                  <th className="py-2">Yield</th>
-                  <th className="py-2">Ingredients</th>
-                  <th className="py-2">Total Cost</th>
-                  <th className="py-2">Selling</th>
-                  <th className="py-2">Margin</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {recipesQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={8}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : recipes.length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={8}>
-                      No recipes yet.
-                    </td>
-                  </tr>
-                ) : (
-                  recipes.map((r) => (
-                    <tr key={r.id} className="border-b last:border-b-0">
-                      <td className="py-2">
-                        <Link
-                          className="font-medium hover:underline"
-                          to={`/recipes/${r.id}`}
-                        >
-                          {r.name}
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          Updated {new Date(r.updatedAt).toLocaleString()}
-                        </div>
-                      </td>
-                      <td className="py-2">
-                        {toNumber(r.yieldQuantity)} {r.yieldUnit?.symbol}
-                      </td>
-                      <td className="py-2">{r._count?.ingredients ?? 0}</td>
-                      <td className="py-2">{formatMoney(r.totalCostCents)}</td>
-                      <td className="py-2">
-                        {formatMoney(r.sellingPriceCents)}
-                      </td>
-                      <td className="py-2">
-                        {toNumber(r.estimatedProfitMargin).toLocaleString(
-                          undefined,
-                          {
-                            maximumFractionDigits: 2,
-                          },
-                        )}
-                        %
-                      </td>
-                      <td className="py-2">{r.status}</td>
-                      <td className="py-2">
-                        <Button asChild size="sm" variant="secondary">
-                          <Link to={`/recipes/${r.id}/builder`}>Builder</Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Selling price (cents)">
+            <Input
+              value={form.sellingPriceCents}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, sellingPriceCents: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Status">
+            <Select
+              value={form.status}
+              onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+        </FormSection>
+      </DialogForm>
+    </PageShell>
   );
 }

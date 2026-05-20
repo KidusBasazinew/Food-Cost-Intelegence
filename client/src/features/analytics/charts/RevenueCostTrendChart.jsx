@@ -1,13 +1,18 @@
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
   Line,
-  LineChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
+import {
+  ChartTooltip,
+  ChartWrapper,
+  CHART_COLORS,
+} from "@/components/ui/erp";
 import { toNumber, formatMoney } from "@/features/analytics/utils/numbers";
 
 export function RevenueCostTrendChart({
@@ -30,35 +35,46 @@ export function RevenueCostTrendChart({
   );
 
   return (
-    <div style={{ height: 320 }}>
-      {data.length === 0 ? (
-        <div className="text-sm text-muted-foreground">No data yet.</div>
-      ) : (
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ left: 8, right: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="day" hide />
-            <YAxis tickFormatter={(v) => formatMoney(v)} />
-            <Tooltip
-              formatter={(v, name) => [formatMoney(v), name]}
-              labelFormatter={(l) => `Day: ${l}`}
+    <ChartWrapper empty={data.length === 0} height={320}>
+      <AreaChart data={data} margin={{ left: 8, right: 8, top: 8 }}>
+        <defs>
+          <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={CHART_COLORS.primary} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+        <XAxis dataKey="day" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+        <YAxis tickFormatter={(v) => formatMoney(v)} tick={{ fontSize: 11 }} width={72} />
+        <Tooltip
+          content={
+            <ChartTooltip
+              formatter={(v, name) => [
+                formatMoney(v),
+                name === "revenueCents" ? "Revenue" : "Ingredient cost",
+              ]}
             />
-            <Line
-              type="monotone"
-              dataKey="revenueCents"
-              stroke="currentColor"
-              dot={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="ingredientCostCents"
-              stroke="currentColor"
-              strokeDasharray="4 4"
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      )}
-    </div>
+          }
+        />
+        <Area
+          type="monotone"
+          dataKey="revenueCents"
+          stroke={CHART_COLORS.primary}
+          fill="url(#revenueGrad)"
+          strokeWidth={2}
+          dot={false}
+          name="revenueCents"
+        />
+        <Line
+          type="monotone"
+          dataKey="ingredientCostCents"
+          stroke={CHART_COLORS.warning}
+          strokeWidth={2}
+          strokeDasharray="6 4"
+          dot={false}
+          name="ingredientCostCents"
+        />
+      </AreaChart>
+    </ChartWrapper>
   );
 }

@@ -1,17 +1,31 @@
 import { useMemo } from "react";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-import { useFoodCostReportQuery } from "@/features/intelligence/hooks/useFoodCost";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  ResponsiveContainer,
+  Cell,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { DollarSign, Percent, TrendingDown, UtensilsCrossed } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  AnalyticsCard,
+  CHART_COLORS,
+  ChartTooltip,
+  ChartWrapper,
+  ContentGrid,
+  DataTable,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+  StatusBadge,
+} from "@/components/ui/erp";
+import { useFoodCostReportQuery } from "@/features/intelligence/hooks/useFoodCost";
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -21,8 +35,7 @@ function toNumber(value) {
 }
 
 function formatMoney(cents) {
-  const v = toNumber(cents) / 100;
-  return v.toLocaleString(undefined, {
+  return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
@@ -46,178 +59,151 @@ export function FoodCostDashboardPage() {
       ? recipes.reduce((acc, r) => acc + toNumber(r.estimatedProfitMargin), 0) /
         recipes.length
       : 0;
-
-    return {
-      count: recipes.length,
-      totalCost,
-      totalSelling,
-      avgMargin,
-    };
+    return { count: recipes.length, totalCost, totalSelling, avgMargin };
   }, [recipes]);
 
-  const topMargin = useMemo(() => {
-    return [...recipes]
-      .sort(
-        (a, b) =>
-          toNumber(b.estimatedProfitMargin) - toNumber(a.estimatedProfitMargin),
-      )
-      .slice(0, 8)
-      .map((r) => ({
-        name: r.name,
-        margin: toNumber(r.estimatedProfitMargin),
-      }));
-  }, [recipes]);
+  const topMargin = useMemo(
+    () =>
+      [...recipes]
+        .sort(
+          (a, b) =>
+            toNumber(b.estimatedProfitMargin) - toNumber(a.estimatedProfitMargin),
+        )
+        .slice(0, 8)
+        .map((r) => ({
+          name: r.name.length > 18 ? `${r.name.slice(0, 18)}…` : r.name,
+          margin: toNumber(r.estimatedProfitMargin),
+        })),
+    [recipes],
+  );
 
-  const lowMargin = useMemo(() => {
-    return [...recipes]
-      .sort(
-        (a, b) =>
-          toNumber(a.estimatedProfitMargin) - toNumber(b.estimatedProfitMargin),
-      )
-      .slice(0, 8);
-  }, [recipes]);
+  const lowMargin = useMemo(
+    () =>
+      [...recipes]
+        .sort(
+          (a, b) =>
+            toNumber(a.estimatedProfitMargin) - toNumber(b.estimatedProfitMargin),
+        )
+        .slice(0, 8),
+    [recipes],
+  );
+
+  const lowMarginColumns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Recipe",
+        cell: ({ getValue }) => (
+          <span className="font-medium">{getValue()}</span>
+        ),
+      },
+      {
+        id: "cost",
+        header: "Cost",
+        cell: ({ row }) => formatMoney(row.original.totalCostCents),
+      },
+      {
+        id: "selling",
+        header: "Selling",
+        cell: ({ row }) => formatMoney(row.original.sellingPriceCents),
+      },
+      {
+        id: "margin",
+        header: "Margin",
+        cell: ({ row }) => {
+          const m = toNumber(row.original.estimatedProfitMargin);
+          return (
+            <StatusBadge
+              status={m < 10 ? "warning" : m < 0 ? "loss" : "profitable"}
+              label={`${m.toFixed(1)}%`}
+            />
+          );
+        },
+      },
+    ],
+    [],
+  );
 
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="text-sm font-medium">Food Cost Dashboard</div>
-        <div className="mt-1 text-sm text-muted-foreground">
-          Menu-level cost, profit, and margin intelligence.
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Food Cost Dashboard"
+        subtitle="Menu-level cost, profit, and margin intelligence across active recipes."
+        actions={
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link to="/recipes">Manage recipes</Link>
+          </Button>
+        }
+      />
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Active recipes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-lg font-medium">
-            {kpis.count}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Total cost (sum)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-lg font-medium">
-            {formatMoney(kpis.totalCost)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Total selling (sum)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-lg font-medium">
-            {formatMoney(kpis.totalSelling)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Avg margin
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-lg font-medium">
-            {kpis.avgMargin.toLocaleString(undefined, {
-              maximumFractionDigits: 2,
-            })}
-            %
-          </CardContent>
-        </Card>
-      </div>
+      <KpiGrid cols={4}>
+        <KpiCard
+          label="Active recipes"
+          value={kpis.count}
+          icon={UtensilsCrossed}
+          accent="purple"
+          loading={reportQuery.isLoading}
+        />
+        <KpiCard
+          label="Total cost (sum)"
+          value={formatMoney(kpis.totalCost)}
+          icon={TrendingDown}
+          accent="amber"
+          loading={reportQuery.isLoading}
+        />
+        <KpiCard
+          label="Total selling (sum)"
+          value={formatMoney(kpis.totalSelling)}
+          icon={DollarSign}
+          accent="blue"
+          loading={reportQuery.isLoading}
+        />
+        <KpiCard
+          label="Avg margin"
+          value={`${kpis.avgMargin.toFixed(1)}%`}
+          icon={Percent}
+          accent="emerald"
+          loading={reportQuery.isLoading}
+        />
+      </KpiGrid>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Top profit margin
-            </CardTitle>
-          </CardHeader>
-          <CardContent style={{ height: 320 }}>
-            {reportQuery.isLoading ? (
-              <div className="text-sm text-muted-foreground">Loading…</div>
-            ) : topMargin.length === 0 ? (
-              <div className="text-sm text-muted-foreground">No data yet.</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topMargin} margin={{ left: 8, right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" hide />
-                  <YAxis tickFormatter={(v) => `${v}%`} />
-                  <Tooltip
-                    formatter={(v) => [`${Number(v).toFixed(2)}%`, "Margin"]}
-                  />
-                  <Bar dataKey="margin" fill="currentColor" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+      <ContentGrid>
+        <AnalyticsCard
+          title="Top profit margin"
+          description="Highest margin meals"
+          accent="emerald"
+          loading={reportQuery.isLoading}
+        >
+          <ChartWrapper empty={topMargin.length === 0} height={300}>
+            <BarChart data={topMargin} margin={{ left: 8, right: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} height={48} />
+              <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
+              <Tooltip
+                content={
+                  <ChartTooltip formatter={(v) => [`${Number(v).toFixed(2)}%`, "Margin"]} />
+                }
+              />
+              <Bar dataKey="margin" radius={[6, 6, 0, 0]}>
+                {topMargin.map((_, i) => (
+                  <Cell key={i} fill={CHART_COLORS.success} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartWrapper>
+        </AnalyticsCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Low margin meals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-muted-foreground">
-                  <tr className="border-b">
-                    <th className="py-2">Recipe</th>
-                    <th className="py-2">Cost</th>
-                    <th className="py-2">Selling</th>
-                    <th className="py-2">Margin</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportQuery.isLoading ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={4}>
-                        Loading…
-                      </td>
-                    </tr>
-                  ) : lowMargin.length === 0 ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={4}>
-                        No data yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    lowMargin.map((r) => (
-                      <tr key={r.id} className="border-b last:border-b-0">
-                        <td className="py-2 font-medium">{r.name}</td>
-                        <td className="py-2">
-                          {formatMoney(r.totalCostCents)}
-                        </td>
-                        <td className="py-2">
-                          {formatMoney(r.sellingPriceCents)}
-                        </td>
-                        <td className="py-2">
-                          {toNumber(r.estimatedProfitMargin).toLocaleString(
-                            undefined,
-                            {
-                              maximumFractionDigits: 2,
-                            },
-                          )}
-                          %
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <AnalyticsCard title="Low margin meals" accent="rose">
+          <DataTable
+            columns={lowMarginColumns}
+            data={lowMargin}
+            loading={reportQuery.isLoading}
+            enableSearch={false}
+            pageSize={8}
+            emptyTitle="No recipes yet"
+          />
+        </AnalyticsCard>
+      </ContentGrid>
+    </PageShell>
   );
 }

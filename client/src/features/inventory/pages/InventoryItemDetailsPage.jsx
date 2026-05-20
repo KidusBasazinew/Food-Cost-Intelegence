@@ -1,16 +1,34 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Package, Plus } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   useCreateInventoryTransactionMutation,
   useInventoryItemQuery,
   useInventoryTransactionsQuery,
 } from "@/features/inventory/hooks/useInventoryItems";
 import { useMeasurementUnitsQuery } from "@/features/inventory/hooks/useMeasurementUnits";
+import {
+  AnalyticsCard,
+  DataTable,
+  DialogForm,
+  FormField,
+  FormSection,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+  StatusBadge,
+} from "@/components/ui/erp";
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -19,27 +37,25 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+const TYPE_STATUS = {
+  ADJUSTMENT: "warning",
+  WASTE: "danger",
+  CONSUMPTION: "operational",
+  TRANSFER: "info",
+  PURCHASE: "success",
+};
+
 export function InventoryItemDetailsPage() {
   const { id } = useParams();
-
   const itemQuery = useInventoryItemQuery(id);
   const unitsQuery = useMeasurementUnitsQuery();
-
   const txnsQuery = useInventoryTransactionsQuery(
     { inventoryItemId: id },
     { enabled: Boolean(id) },
   );
-
   const createTxn = useCreateInventoryTransactionMutation();
 
-  const item = itemQuery.data;
-
-  const allowedUnits = useMemo(() => {
-    const units = unitsQuery.data || [];
-    if (!item?.baseUnit?.baseType) return units;
-    return units.filter((u) => u.baseType === item.baseUnit.baseType);
-  }, [unitsQuery.data, item?.baseUnit?.baseType]);
-
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({
     type: "ADJUSTMENT",
     quantity: "",
@@ -48,6 +64,13 @@ export function InventoryItemDetailsPage() {
     note: "",
   });
 
+  const item = itemQuery.data;
+  const allowedUnits = useMemo(() => {
+    const units = unitsQuery.data || [];
+    if (!item?.baseUnit?.baseType) return units;
+    return units.filter((u) => u.baseType === item.baseUnit.baseType);
+  }, [unitsQuery.data, item?.baseUnit?.baseType]);
+
   const canSubmit =
     Boolean(id) &&
     form.type &&
@@ -55,10 +78,8 @@ export function InventoryItemDetailsPage() {
     form.unitId &&
     !createTxn.isPending;
 
-  async function onSubmit(e) {
-    e.preventDefault();
+  async function onSubmit() {
     if (!canSubmit) return;
-
     await createTxn.mutateAsync({
       inventoryItemId: id,
       type: form.type,
@@ -67,226 +88,196 @@ export function InventoryItemDetailsPage() {
       unitCostCents: form.unitCostCents.trim() ? form.unitCostCents : undefined,
       note: form.note.trim() ? form.note.trim() : undefined,
     });
-
     setForm((f) => ({ ...f, quantity: "", unitCostCents: "", note: "" }));
+    setDialogOpen(false);
   }
 
   const txns = txnsQuery.data || [];
+  const stock = toNumber(item?.quantityInStock);
+  const min = toNumber(item?.minimumStockLevel);
+  const isLow = min > 0 && stock <= min;
+
+  const txnColumns = useMemo(
+    () => [
+      {
+        id: "date",
+        header: "Date",
+        cell: ({ row }) =>
+          row.original.createdAt
+            ? new Date(row.original.createdAt).toLocaleString()
+            : "—",
+      },
+      {
+        accessorKey: "type",
+        header: "Type",
+        cell: ({ getValue }) => (
+          <StatusBadge status={TYPE_STATUS[getValue()] || "operational"} label={getValue()} />
+        ),
+      },
+      {
+        id: "qty",
+        header: "Qty",
+        cell: ({ row }) =>
+          `${toNumber(row.original.quantity).toLocaleString()} ${row.original.unit?.symbol}`,
+      },
+      {
+        id: "baseQty",
+        header: "Base qty",
+        cell: ({ row }) =>
+          `${toNumber(row.original.quantityInBaseUnit).toLocaleString()} ${item?.baseUnit?.symbol}`,
+      },
+      {
+        id: "ref",
+        header: "Reference",
+        cell: ({ row }) =>
+          row.original.referenceType
+            ? `${row.original.referenceType}:${String(row.original.referenceId).slice(0, 8)}`
+            : "—",
+      },
+    ],
+    [item?.baseUnit?.symbol],
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-sm font-medium">Item Details</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {item ? item.name : "Loading…"}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="secondary">
-            <Link to="/inventory/items">Back to items</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/inventory/transactions">All transactions</Link>
-          </Button>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title={item?.name || "Item Details"}
+        subtitle={item?.sku ? `SKU: ${item.sku}` : "Inventory item snapshot and transactions"}
+        badge={
+          item ? (
+            <StatusBadge status={isLow ? "low_stock" : "active"} label={isLow ? "Low stock" : "In stock"} />
+          ) : null
+        }
+        actions={
+          <>
+            <Button className="rounded-xl" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Log transaction
+            </Button>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/inventory/items">All items</Link>
+            </Button>
+            <Button asChild variant="secondary" className="rounded-xl">
+              <Link to="/inventory/transactions">Transactions</Link>
+            </Button>
+          </>
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Snapshot</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!item ? (
-            <div className="text-sm text-muted-foreground">Loading…</div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-4">
-              <div>
-                <div className="text-xs text-muted-foreground">In Stock</div>
-                <div className="text-lg font-semibold">
-                  {toNumber(item.quantityInStock).toLocaleString()}{" "}
-                  {item.baseUnit?.symbol}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Min Stock</div>
-                <div className="text-lg font-semibold">
-                  {toNumber(item.minimumStockLevel).toLocaleString()}{" "}
-                  {item.baseUnit?.symbol}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">
-                  Avg Cost / Base
-                </div>
-                <div className="text-lg font-semibold">
-                  {(
-                    toNumber(item.averageCostPerBaseUnitCents) / 100
-                  ).toLocaleString(undefined, {
-                    style: "currency",
-                    currency: "USD",
-                    maximumFractionDigits: 4,
-                  })}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Category</div>
-                <div className="text-lg font-semibold">{item.category}</div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <KpiGrid cols={4}>
+        <KpiCard
+          label="In stock"
+          value={item ? `${stock.toLocaleString()} ${item.baseUnit?.symbol}` : "—"}
+          icon={Package}
+          accent={isLow ? "rose" : "blue"}
+          loading={itemQuery.isLoading}
+        />
+        <KpiCard
+          label="Minimum"
+          value={item ? `${min.toLocaleString()} ${item.baseUnit?.symbol}` : "—"}
+          accent="amber"
+          loading={itemQuery.isLoading}
+        />
+        <KpiCard
+          label="Avg cost / base"
+          value={
+            item
+              ? (toNumber(item.averageCostPerBaseUnitCents) / 100).toLocaleString(undefined, {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 4,
+                })
+              : "—"
+          }
+          accent="indigo"
+          loading={itemQuery.isLoading}
+        />
+        <KpiCard
+          label="Category"
+          value={item?.category || "—"}
+          accent="purple"
+          loading={itemQuery.isLoading}
+        />
+      </KpiGrid>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Log Transaction</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-6">
-            <div>
-              <div className="text-xs text-muted-foreground">Type</div>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                value={form.type}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, type: e.target.value }))
-                }
-              >
-                <option value="ADJUSTMENT">Adjustment (+/-)</option>
-                <option value="WASTE">Waste (-)</option>
-                <option value="CONSUMPTION">Consumption (-)</option>
-                <option value="TRANSFER">Transfer (-)</option>
-              </select>
-            </div>
+      <AnalyticsCard title="Recent transactions" accent="cyan">
+        <DataTable
+          columns={txnColumns}
+          data={txns.slice(0, 50)}
+          loading={txnsQuery.isLoading}
+          enableSearch={false}
+          pageSize={12}
+          emptyTitle="No transactions yet"
+        />
+      </AnalyticsCard>
 
-            <div>
-              <div className="text-xs text-muted-foreground">Quantity</div>
-              <Input
-                value={form.quantity}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, quantity: e.target.value }))
-                }
-                placeholder={
-                  form.type === "ADJUSTMENT" ? "e.g. 5 or -5" : "e.g. 5"
-                }
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <div className="text-xs text-muted-foreground">Unit</div>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                value={form.unitId}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, unitId: e.target.value }))
-                }
-              >
-                <option value="">Select…</option>
+      <DialogForm
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="Log transaction"
+        description={`Base type: ${item?.baseUnit?.baseType || "—"}`}
+        onSubmit={onSubmit}
+        submitLabel="Create transaction"
+        loading={createTxn.isPending}
+        size="lg"
+      >
+        <FormSection title="Transaction">
+          <FormField label="Type">
+            <Select
+              value={form.type}
+              onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ADJUSTMENT">Adjustment (+/-)</SelectItem>
+                <SelectItem value="WASTE">Waste (-)</SelectItem>
+                <SelectItem value="CONSUMPTION">Consumption (-)</SelectItem>
+                <SelectItem value="TRANSFER">Transfer (-)</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Quantity">
+            <Input
+              value={form.quantity}
+              onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+              placeholder={form.type === "ADJUSTMENT" ? "e.g. 5 or -5" : "e.g. 5"}
+            />
+          </FormField>
+          <FormField label="Unit">
+            <Select
+              value={form.unitId}
+              onValueChange={(v) => setForm((f) => ({ ...f, unitId: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select unit…" />
+              </SelectTrigger>
+              <SelectContent>
                 {allowedUnits.map((u) => (
-                  <option key={u.id} value={u.id}>
+                  <SelectItem key={u.id} value={u.id}>
                     {u.name} ({u.symbol})
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-              <div className="mt-1 text-xs text-muted-foreground">
-                Must match base type: {item?.baseUnit?.baseType || "—"}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-xs text-muted-foreground">
-                Unit Cost (cents)
-              </div>
-              <Input
-                value={form.unitCostCents}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, unitCostCents: e.target.value }))
-                }
-                placeholder="optional"
-              />
-            </div>
-
-            <div className="md:col-span-6">
-              <div className="text-xs text-muted-foreground">Note</div>
-              <Input
-                value={form.note}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, note: e.target.value }))
-                }
-                placeholder="Optional context"
-              />
-            </div>
-
-            <div className="md:col-span-6">
-              <Button type="submit" disabled={!canSubmit}>
-                {createTxn.isPending ? "Saving…" : "Create transaction"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Recent Transactions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Date</th>
-                  <th className="py-2">Type</th>
-                  <th className="py-2">Qty</th>
-                  <th className="py-2">Base Qty</th>
-                  <th className="py-2">Ref</th>
-                </tr>
-              </thead>
-              <tbody>
-                {txnsQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={5}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : txns.length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={5}>
-                      No transactions yet.
-                    </td>
-                  </tr>
-                ) : (
-                  txns.slice(0, 25).map((t) => (
-                    <tr key={t.id} className="border-b last:border-b-0">
-                      <td className="py-2">
-                        {t.createdAt
-                          ? new Date(t.createdAt).toLocaleString()
-                          : "—"}
-                      </td>
-                      <td className="py-2">{t.type}</td>
-                      <td className="py-2">
-                        {toNumber(t.quantity).toLocaleString()} {t.unit?.symbol}
-                      </td>
-                      <td className="py-2">
-                        {toNumber(t.quantityInBaseUnit).toLocaleString()}{" "}
-                        {item?.baseUnit?.symbol}
-                      </td>
-                      <td className="py-2 text-muted-foreground">
-                        {t.referenceType
-                          ? `${t.referenceType}:${String(t.referenceId).slice(0, 8)}`
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Unit cost (cents)">
+            <Input
+              value={form.unitCostCents}
+              onChange={(e) => setForm((f) => ({ ...f, unitCostCents: e.target.value }))}
+              placeholder="optional"
+            />
+          </FormField>
+          <FormField label="Note" fullWidth>
+            <Input
+              value={form.note}
+              onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+              placeholder="Optional context"
+            />
+          </FormField>
+        </FormSection>
+      </DialogForm>
+    </PageShell>
   );
 }

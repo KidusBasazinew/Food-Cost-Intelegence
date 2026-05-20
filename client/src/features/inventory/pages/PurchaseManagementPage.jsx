@@ -1,10 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Plus, ShoppingCart } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   useCreatePurchaseMutation,
   usePurchasesQuery,
@@ -13,6 +19,19 @@ import {
 import { useSuppliersQuery } from "@/features/inventory/hooks/useSuppliers";
 import { useInventoryItemsQuery } from "@/features/inventory/hooks/useInventoryItems";
 import { useMeasurementUnitsQuery } from "@/features/inventory/hooks/useMeasurementUnits";
+import {
+  AnalyticsCard,
+  DataTable,
+  DialogForm,
+  FormField,
+  FormSection,
+  InsightPanel,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+  StatusBadge,
+} from "@/components/ui/erp";
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -22,46 +41,54 @@ function toNumber(value) {
 }
 
 function formatMoneyFromCents(cents) {
-  const dollars = toNumber(cents) / 100;
-  return dollars.toLocaleString(undefined, {
+  return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
   });
 }
 
+const EMPTY_LINE = {
+  inventoryItemId: "",
+  unitId: "",
+  quantity: "",
+  unitCostCents: "",
+};
+
+const EMPTY_FORM = {
+  supplierId: "",
+  taxCents: "0",
+  notes: "",
+  items: [EMPTY_LINE],
+};
+
+const STATUS_MAP = {
+  RECEIVED: "completed",
+  PENDING: "pending",
+  CANCELLED: "cancelled",
+  DRAFT: "draft",
+};
+
 export function PurchaseManagementPage() {
   const suppliersQuery = useSuppliersQuery();
   const itemsQuery = useInventoryItemsQuery();
   const unitsQuery = useMeasurementUnitsQuery();
-
   const purchasesQuery = usePurchasesQuery();
-
   const createPurchase = useCreatePurchaseMutation();
   const updatePurchase = useUpdatePurchaseMutation();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const suppliers = suppliersQuery.data || [];
   const inventoryItems = itemsQuery.data || [];
   const units = unitsQuery.data || [];
+  const purchases = purchasesQuery.data || [];
 
   const itemById = useMemo(
     () => new Map(inventoryItems.map((i) => [i.id, i])),
     [inventoryItems],
   );
-
-  const [form, setForm] = useState({
-    supplierId: "",
-    taxCents: "0",
-    notes: "",
-    items: [
-      {
-        inventoryItemId: "",
-        unitId: "",
-        quantity: "",
-        unitCostCents: "",
-      },
-    ],
-  });
 
   const canSubmit =
     form.supplierId &&
@@ -84,13 +111,7 @@ export function PurchaseManagementPage() {
   }
 
   function addLine() {
-    setForm((f) => ({
-      ...f,
-      items: [
-        ...f.items,
-        { inventoryItemId: "", unitId: "", quantity: "", unitCostCents: "" },
-      ],
-    }));
+    setForm((f) => ({ ...f, items: [...f.items, { ...EMPTY_LINE }] }));
   }
 
   function removeLine(idx) {
@@ -100,10 +121,8 @@ export function PurchaseManagementPage() {
     }));
   }
 
-  async function onSubmit(e) {
-    e.preventDefault();
+  async function onSubmit() {
     if (!canSubmit) return;
-
     await createPurchase.mutateAsync({
       supplierId: form.supplierId,
       taxCents: form.taxCents,
@@ -115,295 +134,276 @@ export function PurchaseManagementPage() {
         unitCostCents: l.unitCostCents,
       })),
     });
-
-    setForm({
-      supplierId: "",
-      taxCents: "0",
-      notes: "",
-      items: [
-        { inventoryItemId: "", unitId: "", quantity: "", unitCostCents: "" },
-      ],
-    });
+    setForm(EMPTY_FORM);
+    setDialogOpen(false);
   }
 
-  const purchases = purchasesQuery.data || [];
+  const receivedCount = purchases.filter((p) => p.status === "RECEIVED").length;
+  const pendingCount = purchases.filter(
+    (p) => p.status !== "RECEIVED" && p.status !== "CANCELLED",
+  ).length;
+
+  const columns = useMemo(
+    () => [
+      {
+        id: "date",
+        header: "Date",
+        cell: ({ row }) =>
+          row.original.createdAt
+            ? new Date(row.original.createdAt).toLocaleString()
+            : "—",
+      },
+      {
+        id: "supplier",
+        header: "Supplier",
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.supplier?.name || "—"}</span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ getValue }) => (
+          <StatusBadge status={STATUS_MAP[getValue()] || "pending"} label={getValue()} />
+        ),
+      },
+      {
+        id: "total",
+        header: "Total",
+        cell: ({ row }) => formatMoneyFromCents(row.original.totalCents),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const p = row.original;
+          if (p.status === "RECEIVED") {
+            return (
+              <span className="text-xs text-muted-foreground">
+                Received{" "}
+                {p.receivedAt
+                  ? new Date(p.receivedAt).toLocaleDateString()
+                  : ""}
+              </span>
+            );
+          }
+          if (p.status === "CANCELLED") {
+            return <StatusBadge status="cancelled" label="Cancelled" />;
+          }
+          return (
+            <Button
+              size="sm"
+              className="rounded-lg"
+              onClick={() =>
+                updatePurchase.mutate({
+                  id: p.id,
+                  input: { status: "RECEIVED" },
+                })
+              }
+              disabled={updatePurchase.isPending}
+            >
+              Mark received
+            </Button>
+          );
+        },
+      },
+    ],
+    [],
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-sm font-medium">Purchase Management</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Create purchase orders and receive them into stock.
-          </div>
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Purchase Management"
+        subtitle="Create purchase orders and receive them into stock."
+        actions={
+          <>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/suppliers">Suppliers</Link>
+            </Button>
+            <Button asChild variant="secondary" className="rounded-xl">
+              <Link to="/inventory/dashboard">Inventory</Link>
+            </Button>
+            <Button className="rounded-xl" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create purchase
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="secondary">
-            <Link to="/suppliers">Suppliers</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/inventory/dashboard">Inventory</Link>
-          </Button>
-        </div>
-      </div>
+      <KpiGrid cols={3}>
+        <KpiCard
+          label="Total purchases"
+          value={purchases.length}
+          icon={ShoppingCart}
+          accent="purple"
+          loading={purchasesQuery.isLoading}
+        />
+        <KpiCard
+          label="Received"
+          value={receivedCount}
+          accent="emerald"
+          loading={purchasesQuery.isLoading}
+        />
+        <KpiCard
+          label="Pending"
+          value={pendingCount}
+          accent="amber"
+          loading={purchasesQuery.isLoading}
+        />
+      </KpiGrid>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Create Purchase</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div>
-                <div className="text-xs text-muted-foreground">Supplier</div>
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={form.supplierId}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, supplierId: e.target.value }))
-                  }
-                >
-                  <option value="">Select…</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-                {suppliers.length === 0 && !suppliersQuery.isLoading && (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    Add a supplier first.
-                  </div>
-                )}
-              </div>
+      <InsightPanel variant="info" title="Receiving purchases">
+        Marking a purchase as received writes inventory transactions and updates
+        weighted average cost automatically.
+      </InsightPanel>
 
-              <div>
-                <div className="text-xs text-muted-foreground">Tax (cents)</div>
-                <Input
-                  value={form.taxCents}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, taxCents: e.target.value }))
-                  }
-                />
-              </div>
+      <DataTable
+        columns={columns}
+        data={purchases}
+        loading={purchasesQuery.isLoading}
+        searchPlaceholder="Search purchases…"
+        emptyTitle="No purchases yet"
+        emptyDescription="Create your first purchase order to receive stock."
+      />
 
-              <div>
-                <div className="text-xs text-muted-foreground">Notes</div>
-                <Input
-                  value={form.notes}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, notes: e.target.value }))
-                  }
-                  placeholder="optional"
-                />
-              </div>
-            </div>
+      <DialogForm
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="Create purchase"
+        description="Add line items and assign a supplier."
+        onSubmit={onSubmit}
+        submitLabel="Create purchase"
+        loading={createPurchase.isPending}
+        size="xl"
+        className="sm:max-w-4xl"
+      >
+        <FormSection title="Order details">
+          <FormField label="Supplier">
+            <Select
+              value={form.supplierId}
+              onValueChange={(v) => setForm((f) => ({ ...f, supplierId: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select supplier…" />
+              </SelectTrigger>
+              <SelectContent>
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Tax (cents)">
+            <Input
+              value={form.taxCents}
+              onChange={(e) => setForm((f) => ({ ...f, taxCents: e.target.value }))}
+            />
+          </FormField>
+          <FormField label="Notes" fullWidth>
+            <Input
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              placeholder="optional"
+            />
+          </FormField>
+        </FormSection>
 
-            <div className="space-y-3">
-              <div className="text-xs text-muted-foreground">Line items</div>
-              {form.items.map((line, idx) => {
-                const selectedItem = itemById.get(line.inventoryItemId);
-                const baseType = selectedItem?.baseUnit?.baseType;
-                const allowedUnits = baseType
-                  ? units.filter((u) => u.baseType === baseType)
-                  : units;
+        <AnalyticsCard title="Line items" accent="blue" contentClassName="space-y-3">
+          {form.items.map((line, idx) => {
+            const selectedItem = itemById.get(line.inventoryItemId);
+            const baseType = selectedItem?.baseUnit?.baseType;
+            const allowedUnits = baseType
+              ? units.filter((u) => u.baseType === baseType)
+              : units;
 
-                return (
-                  <div
-                    key={idx}
-                    className="grid gap-2 rounded-lg border bg-card p-3 md:grid-cols-12"
-                  >
-                    <div className="md:col-span-4">
-                      <div className="text-xs text-muted-foreground">Item</div>
-                      <select
-                        className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                        value={line.inventoryItemId}
-                        onChange={(e) =>
-                          setLine(idx, {
-                            inventoryItemId: e.target.value,
-                            unitId: "",
-                          })
-                        }
-                      >
-                        <option value="">Select…</option>
+            return (
+              <div
+                key={idx}
+                className="grid gap-3 rounded-xl border bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-12"
+              >
+                <div className="lg:col-span-4">
+                  <FormField label="Item">
+                    <Select
+                      value={line.inventoryItemId}
+                      onValueChange={(v) =>
+                        setLine(idx, { inventoryItemId: v, unitId: "" })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select item…" />
+                      </SelectTrigger>
+                      <SelectContent>
                         {inventoryItems.map((i) => (
-                          <option key={i.id} value={i.id}>
+                          <SelectItem key={i.id} value={i.id}>
                             {i.name} ({i.baseUnit?.symbol})
-                          </option>
+                          </SelectItem>
                         ))}
-                      </select>
-                    </div>
-
-                    <div className="md:col-span-3">
-                      <div className="text-xs text-muted-foreground">Unit</div>
-                      <select
-                        className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                        value={line.unitId}
-                        onChange={(e) =>
-                          setLine(idx, { unitId: e.target.value })
-                        }
-                      >
-                        <option value="">Select…</option>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                </div>
+                <div className="lg:col-span-3">
+                  <FormField label="Unit">
+                    <Select
+                      value={line.unitId}
+                      onValueChange={(v) => setLine(idx, { unitId: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Unit…" />
+                      </SelectTrigger>
+                      <SelectContent>
                         {allowedUnits.map((u) => (
-                          <option key={u.id} value={u.id}>
+                          <SelectItem key={u.id} value={u.id}>
                             {u.name} ({u.symbol})
-                          </option>
+                          </SelectItem>
                         ))}
-                      </select>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        Base type: {baseType || "—"}
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <div className="text-xs text-muted-foreground">Qty</div>
-                      <Input
-                        value={line.quantity}
-                        onChange={(e) =>
-                          setLine(idx, { quantity: e.target.value })
-                        }
-                        placeholder="e.g. 2"
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <div className="text-xs text-muted-foreground">
-                        Unit Cost (cents)
-                      </div>
-                      <Input
-                        value={line.unitCostCents}
-                        onChange={(e) =>
-                          setLine(idx, { unitCostCents: e.target.value })
-                        }
-                        placeholder="e.g. 500"
-                      />
-                    </div>
-
-                    <div className="md:col-span-1 flex items-end justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => removeLine(idx)}
-                        disabled={form.items.length === 1}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className="flex gap-2">
-                <Button type="button" variant="secondary" onClick={addLine}>
-                  Add line
-                </Button>
-                <Button type="submit" disabled={!canSubmit}>
-                  {createPurchase.isPending ? "Creating…" : "Create purchase"}
-                </Button>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                </div>
+                <div className="lg:col-span-2">
+                  <FormField label="Qty">
+                    <Input
+                      value={line.quantity}
+                      onChange={(e) => setLine(idx, { quantity: e.target.value })}
+                      placeholder="2"
+                    />
+                  </FormField>
+                </div>
+                <div className="lg:col-span-2">
+                  <FormField label="Unit cost (¢)">
+                    <Input
+                      value={line.unitCostCents}
+                      onChange={(e) =>
+                        setLine(idx, { unitCostCents: e.target.value })
+                      }
+                      placeholder="500"
+                    />
+                  </FormField>
+                </div>
+                <div className="flex items-end lg:col-span-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeLine(idx)}
+                    disabled={form.items.length === 1}
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
-
-              {(itemsQuery.isLoading ||
-                unitsQuery.isLoading ||
-                suppliersQuery.isLoading) && (
-                <div className="text-xs text-muted-foreground">
-                  Loading references…
-                </div>
-              )}
-              {inventoryItems.length === 0 && !itemsQuery.isLoading && (
-                <div className="text-xs text-muted-foreground">
-                  Create inventory items before making purchases.
-                </div>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Purchases</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Date</th>
-                  <th className="py-2">Supplier</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2">Total</th>
-                  <th className="py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {purchasesQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={5}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : purchases.length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={5}>
-                      No purchases yet.
-                    </td>
-                  </tr>
-                ) : (
-                  purchases.map((p) => (
-                    <tr key={p.id} className="border-b last:border-b-0">
-                      <td className="py-2">
-                        {p.createdAt
-                          ? new Date(p.createdAt).toLocaleString()
-                          : "—"}
-                      </td>
-                      <td className="py-2 font-medium">
-                        {p.supplier?.name || "—"}
-                      </td>
-                      <td className="py-2">{p.status}</td>
-                      <td className="py-2 text-muted-foreground">
-                        {formatMoneyFromCents(p.totalCents)}
-                      </td>
-                      <td className="py-2">
-                        {p.status === "RECEIVED" ? (
-                          <span className="text-xs text-muted-foreground">
-                            Received{" "}
-                            {p.receivedAt
-                              ? new Date(p.receivedAt).toLocaleDateString()
-                              : ""}
-                          </span>
-                        ) : p.status === "CANCELLED" ? (
-                          <span className="text-xs text-muted-foreground">
-                            Cancelled
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              updatePurchase.mutate({
-                                id: p.id,
-                                input: { status: "RECEIVED" },
-                              })
-                            }
-                            disabled={updatePurchase.isPending}
-                          >
-                            Mark received
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-3 text-xs text-muted-foreground">
-            Note: receiving a purchase writes inventory transactions and updates
-            weighted average cost.
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            );
+          })}
+          <Button type="button" variant="secondary" className="rounded-xl" onClick={addLine}>
+            Add line
+          </Button>
+        </AnalyticsCard>
+      </DialogForm>
+    </PageShell>
   );
 }

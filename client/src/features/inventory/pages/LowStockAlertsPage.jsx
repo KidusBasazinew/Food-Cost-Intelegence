@@ -1,8 +1,16 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
+import {
+  DataTable,
+  InsightPanel,
+  KpiCard,
+  PageHeader,
+  PageShell,
+  StatusBadge,
+} from "@/components/ui/erp";
 import { useInventoryItemsQuery } from "@/features/inventory/hooks/useInventoryItems";
 
 function toNumber(value) {
@@ -16,78 +24,88 @@ export function LowStockAlertsPage() {
   const itemsQuery = useInventoryItemsQuery({ lowStock: "true" });
   const items = itemsQuery.data || [];
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-medium">Low Stock Alerts</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Items at or below minimum stock.
-          </div>
-        </div>
-        <Button asChild variant="secondary">
-          <Link to="/inventory/dashboard">Back to dashboard</Link>
-        </Button>
-      </div>
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Item",
+        cell: ({ row }) => (
+          <Link
+            className="font-medium text-primary hover:underline"
+            to={`/inventory/items/${row.original.id}`}
+          >
+            {row.original.name}
+          </Link>
+        ),
+      },
+      {
+        id: "stock",
+        header: "Stock",
+        cell: ({ row }) => (
+          <span className="font-medium text-rose-600 dark:text-rose-400">
+            {toNumber(row.original.quantityInStock).toLocaleString()}{" "}
+            {row.original.baseUnit?.symbol}
+          </span>
+        ),
+      },
+      {
+        id: "min",
+        header: "Minimum",
+        cell: ({ row }) =>
+          `${toNumber(row.original.minimumStockLevel).toLocaleString()} ${row.original.baseUnit?.symbol}`,
+      },
+      {
+        accessorKey: "category",
+        header: "Category",
+        cell: ({ getValue }) => (
+          <StatusBadge status="warning" label={getValue()} />
+        ),
+      },
+    ],
+    [],
+  );
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Alerts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Item</th>
-                  <th className="py-2">Stock</th>
-                  <th className="py-2">Min</th>
-                  <th className="py-2">Category</th>
-                </tr>
-              </thead>
-              <tbody>
-                {itemsQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={4}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : items.length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={4}>
-                      No low stock items.
-                    </td>
-                  </tr>
-                ) : (
-                  items.map((i) => (
-                    <tr key={i.id} className="border-b last:border-b-0">
-                      <td className="py-2">
-                        <Link
-                          className="font-medium hover:underline"
-                          to={`/inventory/items/${i.id}`}
-                        >
-                          {i.name}
-                        </Link>
-                      </td>
-                      <td className="py-2">
-                        {toNumber(i.quantityInStock).toLocaleString()}{" "}
-                        {i.baseUnit?.symbol}
-                      </td>
-                      <td className="py-2">
-                        {toNumber(i.minimumStockLevel).toLocaleString()}{" "}
-                        {i.baseUnit?.symbol}
-                      </td>
-                      <td className="py-2 text-muted-foreground">
-                        {i.category}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+  return (
+    <PageShell>
+      <PageHeader
+        title="Low Stock Alerts"
+        subtitle="Items at or below minimum stock levels — reorder before service impact."
+        badge={
+          items.length > 0 ? (
+            <StatusBadge status="critical" label={`${items.length} alerts`} />
+          ) : null
+        }
+        actions={
+          <Button asChild variant="outline" className="rounded-xl">
+            <Link to="/inventory/dashboard">Inventory dashboard</Link>
+          </Button>
+        }
+      />
+
+      {items.length > 0 ? (
+        <InsightPanel variant="critical" title="Immediate action recommended">
+          Review each item below and create a purchase order to restore safe stock
+          levels before the next service period.
+        </InsightPanel>
+      ) : null}
+
+      <KpiCard
+        label="Active alerts"
+        value={items.length}
+        icon={AlertTriangle}
+        accent="rose"
+        loading={itemsQuery.isLoading}
+        hint={items.length === 0 ? "All stock levels healthy" : "Requires replenishment"}
+      />
+
+      <DataTable
+        columns={columns}
+        data={items}
+        loading={itemsQuery.isLoading}
+        enableSearch={false}
+        emptyTitle="No low stock items"
+        emptyDescription="All inventory is above minimum levels. Great job!"
+      />
+    </PageShell>
   );
 }

@@ -1,7 +1,16 @@
 import { useMemo } from "react";
+import { TrendingUp } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
+import {
+  AnalyticsCard,
+  DataTable,
+  InsightPanel,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+  StatusBadge,
+} from "@/components/ui/erp";
 import { useFoodCostReportQuery } from "@/features/intelligence/hooks/useFoodCost";
 
 function toNumber(value) {
@@ -12,8 +21,7 @@ function toNumber(value) {
 }
 
 function formatMoney(cents) {
-  const v = toNumber(cents) / 100;
-  return v.toLocaleString(undefined, {
+  return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
@@ -24,95 +32,122 @@ export function ProfitabilityReportsPage() {
   const reportQuery = useFoodCostReportQuery({ status: "ACTIVE" });
   const recipes = reportQuery.data || [];
 
-  const sorted = useMemo(() => {
-    return [...recipes].sort(
-      (a, b) =>
-        toNumber(b.estimatedProfitMargin) - toNumber(a.estimatedProfitMargin),
-    );
-  }, [recipes]);
+  const sorted = useMemo(
+    () =>
+      [...recipes].sort(
+        (a, b) =>
+          toNumber(b.estimatedProfitMargin) - toNumber(a.estimatedProfitMargin),
+      ),
+    [recipes],
+  );
+
+  const profitable = sorted.filter((r) => toNumber(r.estimatedProfitCents) >= 0);
+  const lossMaking = sorted.filter((r) => toNumber(r.estimatedProfitCents) < 0);
+  const lowMargin = sorted.filter(
+    (r) =>
+      toNumber(r.estimatedProfitCents) >= 0 &&
+      toNumber(r.estimatedProfitMargin) < 15,
+  );
+
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Recipe",
+        cell: ({ getValue }) => (
+          <span className="font-medium">{getValue()}</span>
+        ),
+      },
+      {
+        id: "cost",
+        header: "Cost",
+        cell: ({ row }) => formatMoney(row.original.totalCostCents),
+      },
+      {
+        id: "selling",
+        header: "Selling",
+        cell: ({ row }) => formatMoney(row.original.sellingPriceCents),
+      },
+      {
+        id: "profit",
+        header: "Profit",
+        cell: ({ row }) => {
+          const loss = toNumber(row.original.estimatedProfitCents) < 0;
+          return (
+            <span className={loss ? "font-medium text-rose-600 dark:text-rose-400" : "font-medium text-emerald-600 dark:text-emerald-400"}>
+              {formatMoney(row.original.estimatedProfitCents)}
+            </span>
+          );
+        },
+      },
+      {
+        id: "margin",
+        header: "Margin",
+        cell: ({ row }) => {
+          const margin = toNumber(row.original.estimatedProfitMargin);
+          const loss = toNumber(row.original.estimatedProfitCents) < 0;
+          return (
+            <StatusBadge
+              status={loss ? "loss" : margin < 10 ? "warning" : "profitable"}
+              label={`${margin.toFixed(1)}%`}
+            />
+          );
+        },
+      },
+    ],
+    [],
+  );
 
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="text-sm font-medium">Profitability Reports</div>
-        <div className="mt-1 text-sm text-muted-foreground">
-          Most profitable meals, low margin meals, and loss-making items.
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Profitability Reports"
+        subtitle="Most profitable meals, low margin items, and loss-making menu entries."
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Profitability</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Recipe</th>
-                  <th className="py-2">Cost</th>
-                  <th className="py-2">Selling</th>
-                  <th className="py-2">Profit</th>
-                  <th className="py-2">Margin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={5}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : sorted.length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={5}>
-                      No data yet.
-                    </td>
-                  </tr>
-                ) : (
-                  sorted.map((r) => {
-                    const margin = toNumber(r.estimatedProfitMargin);
-                    const loss = toNumber(r.estimatedProfitCents) < 0;
+      <KpiGrid cols={3}>
+        <KpiCard
+          label="Profitable items"
+          value={profitable.length}
+          icon={TrendingUp}
+          accent="emerald"
+          loading={reportQuery.isLoading}
+        />
+        <KpiCard
+          label="Low margin (<15%)"
+          value={lowMargin.length}
+          accent="amber"
+          loading={reportQuery.isLoading}
+        />
+        <KpiCard
+          label="Loss-making"
+          value={lossMaking.length}
+          accent="rose"
+          loading={reportQuery.isLoading}
+        />
+      </KpiGrid>
 
-                    return (
-                      <tr key={r.id} className="border-b last:border-b-0">
-                        <td className="py-2 font-medium">{r.name}</td>
-                        <td className="py-2">
-                          {formatMoney(r.totalCostCents)}
-                        </td>
-                        <td className="py-2">
-                          {formatMoney(r.sellingPriceCents)}
-                        </td>
-                        <td className="py-2">
-                          <span className={loss ? "text-destructive" : ""}>
-                            {formatMoney(r.estimatedProfitCents)}
-                          </span>
-                        </td>
-                        <td className="py-2">
-                          <span
-                            className={
-                              loss
-                                ? "text-destructive"
-                                : margin < 10
-                                  ? "text-amber-600"
-                                  : ""
-                            }
-                          >
-                            {margin.toLocaleString(undefined, {
-                              maximumFractionDigits: 2,
-                            })}
-                            %
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      {lossMaking.length > 0 ? (
+        <InsightPanel variant="critical" title="Menu engineering alert">
+          {lossMaking.length} recipe{lossMaking.length !== 1 ? "s are" : " is"} selling
+          below cost. Review pricing or ingredient costs immediately.
+        </InsightPanel>
+      ) : null}
+
+      <AnalyticsCard
+        title="Full profitability ranking"
+        description="Sorted by margin — highest first"
+        accent="purple"
+      >
+        <DataTable
+          columns={columns}
+          data={sorted}
+          loading={reportQuery.isLoading}
+          searchPlaceholder="Search recipes…"
+          emptyTitle="No profitability data yet"
+          emptyDescription="Create active recipes with ingredients to see margins."
+        />
+      </AnalyticsCard>
+    </PageShell>
   );
 }

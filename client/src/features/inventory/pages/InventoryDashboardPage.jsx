@@ -1,20 +1,36 @@
 import { Link } from "react-router-dom";
 import {
+  AlertTriangle,
+  DollarSign,
+  Package,
+  ShoppingCart,
+  TrendingUp,
+} from "lucide-react";
+import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
-  ResponsiveContainer,
+  Cell,
   Tooltip,
   XAxis,
   YAxis,
-  Line,
-  LineChart,
-  Legend,
 } from "recharts";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
+import {
+  AnalyticsCard,
+  CHART_COLORS,
+  ChartTooltip,
+  ChartWrapper,
+  ContentGrid,
+  InsightPanel,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+} from "@/components/ui/erp";
 import { useInventoryItemsQuery } from "@/features/inventory/hooks/useInventoryItems";
 import { usePurchasesQuery } from "@/features/inventory/hooks/usePurchases";
 
@@ -26,8 +42,7 @@ function toNumber(value) {
 }
 
 function formatMoneyFromCents(cents) {
-  const dollars = toNumber(cents) / 100;
-  return dollars.toLocaleString(undefined, {
+  return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
@@ -48,10 +63,8 @@ function addDays(date, days) {
 
 export function InventoryDashboardPage() {
   const itemsQuery = useInventoryItemsQuery();
-
   const from = startOfDay(addDays(new Date(), -29)).toISOString();
   const to = new Date().toISOString();
-
   const purchasesQuery = usePurchasesQuery({ from, to });
 
   const items = itemsQuery.data || [];
@@ -99,7 +112,6 @@ export function InventoryDashboardPage() {
         spend: 0,
       });
     }
-
     for (const p of purchases) {
       if (p.status !== "RECEIVED") continue;
       const createdAt = p.createdAt ? new Date(p.createdAt) : null;
@@ -109,7 +121,6 @@ export function InventoryDashboardPage() {
       if (!bucket) continue;
       bucket.spend += toNumber(p.totalCents) / 100;
     }
-
     return Array.from(map.values());
   })();
 
@@ -135,167 +146,162 @@ export function InventoryDashboardPage() {
   const isLoading = itemsQuery.isLoading || purchasesQuery.isLoading;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-sm font-medium">Inventory Dashboard</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Live stock, purchases, and cost signals.
-          </div>
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Inventory Dashboard"
+        subtitle="Live stock valuation, purchase spend, and low-stock signals."
+        actions={
+          <>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/inventory/items">Items</Link>
+            </Button>
+            <Button asChild variant="secondary" className="rounded-xl">
+              <Link to="/inventory/transactions">Transactions</Link>
+            </Button>
+            <Button asChild className="rounded-xl">
+              <Link to="/purchases">Purchases</Link>
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="secondary">
-            <Link to="/inventory/items">Items</Link>
-          </Button>
-          <Button asChild variant="secondary">
-            <Link to="/inventory/transactions">Transactions</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/purchases">Purchases</Link>
-          </Button>
-        </div>
-      </div>
+      <KpiGrid cols={3}>
+        <KpiCard
+          label="Inventory value"
+          value={isLoading ? "…" : formatMoneyFromCents(inventoryValueCents)}
+          hint="Weighted average cost"
+          icon={Package}
+          accent="blue"
+          loading={isLoading}
+        />
+        <KpiCard
+          label="Low stock alerts"
+          value={isLoading ? "…" : lowStockCount}
+          hint="At or below minimum"
+          icon={AlertTriangle}
+          accent="amber"
+          loading={isLoading}
+        />
+        <KpiCard
+          label="Purchases (30d)"
+          value={isLoading ? "…" : formatMoneyFromCents(purchasesTotalCents)}
+          hint="Received only"
+          icon={ShoppingCart}
+          accent="purple"
+          loading={isLoading}
+        />
+      </KpiGrid>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Inventory Value
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">
-              {isLoading ? "…" : formatMoneyFromCents(inventoryValueCents)}
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Estimated using weighted average cost.
-            </div>
-          </CardContent>
-        </Card>
+      {lowStockCount > 0 ? (
+        <InsightPanel variant="warning" title="Stock attention needed">
+          {lowStockCount} item{lowStockCount !== 1 ? "s" : ""} need replenishment.{" "}
+          <Link to="/inventory/low-stock" className="font-medium text-primary hover:underline">
+            View low stock alerts →
+          </Link>
+        </InsightPanel>
+      ) : null}
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Low Stock Alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">
-              {isLoading ? "…" : lowStockCount}
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Items at or below minimum stock.
-            </div>
-            <div className="mt-3">
-              <Button asChild size="sm" variant="outline">
-                <Link to="/inventory/low-stock">View low stock</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <ContentGrid>
+        <AnalyticsCard title="Spend trend" description="Last 30 days" accent="cyan" loading={isLoading}>
+          <ChartWrapper empty={dailySpend.every((d) => d.spend === 0)} height={288}>
+            <AreaChart data={dailySpend} margin={{ left: 8, right: 8 }}>
+              <defs>
+                <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={CHART_COLORS.cyan} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={CHART_COLORS.cyan} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip
+                content={
+                  <ChartTooltip
+                    formatter={(v) => [
+                      Number(v).toLocaleString(undefined, { style: "currency", currency: "USD" }),
+                      "Spend",
+                    ]}
+                  />
+                }
+              />
+              <Area
+                type="monotone"
+                dataKey="spend"
+                stroke={CHART_COLORS.cyan}
+                fill="url(#spendGrad)"
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ChartWrapper>
+        </AnalyticsCard>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Purchases (30 days)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">
-              {isLoading ? "…" : formatMoneyFromCents(purchasesTotalCents)}
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Received purchases only.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <AnalyticsCard
+          title="Value by category"
+          description="Top 8 categories"
+          accent="indigo"
+          loading={isLoading}
+        >
+          <ChartWrapper empty={categoryData.length === 0} height={288}>
+            <BarChart data={categoryData} margin={{ left: 8, right: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+              <XAxis dataKey="category" tick={{ fontSize: 10 }} interval={0} height={48} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip
+                content={
+                  <ChartTooltip
+                    formatter={(v) => [
+                      Number(v).toLocaleString(undefined, { style: "currency", currency: "USD" }),
+                      "Value",
+                    ]}
+                  />
+                }
+              />
+              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                {categoryData.map((_, i) => (
+                  <Cell key={i} fill={CHART_COLORS.palette[i % CHART_COLORS.palette.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ChartWrapper>
+        </AnalyticsCard>
+      </ContentGrid>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Spend Trend</CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={dailySpend}
-                margin={{ left: 10, right: 10, top: 10, bottom: 0 }}
+      <AnalyticsCard
+        title="Most purchased items"
+        description="Last 30 days by spend"
+        accent="emerald"
+      >
+        {mostPurchasedItems.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No purchase lines yet.</p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {mostPurchasedItems.map((row, i) => (
+              <div
+                key={row.name}
+                className="rounded-xl border bg-gradient-to-br from-muted/30 to-transparent p-4 transition-shadow hover:shadow-md"
               >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => `$${Number(v).toFixed(2)}`} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="spend"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Inventory Value by Category
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={categoryData}
-                margin={{ left: 10, right: 10, top: 10, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="category"
-                  tick={{ fontSize: 10 }}
-                  interval={0}
-                  height={50}
-                />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => `$${Number(v).toFixed(2)}`} />
-                <Bar dataKey="value" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Most Purchased Items (30 days)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {mostPurchasedItems.length === 0 ? (
-              <div className="text-sm text-muted-foreground">
-                No purchase lines yet.
-              </div>
-            ) : (
-              mostPurchasedItems.map((row) => (
-                <div key={row.name} className="rounded-lg border bg-card p-3">
-                  <div className="text-sm font-medium">{row.name}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    {row.total.toLocaleString(undefined, {
-                      style: "currency",
-                      currency: "USD",
-                      maximumFractionDigits: 2,
-                    })}
-                  </div>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold">{row.name}</p>
+                  <TrendingUp className="h-4 w-4 text-emerald-500 opacity-70" />
                 </div>
-              ))
-            )}
+                <p className="mt-2 text-lg font-bold">
+                  {row.total.toLocaleString(undefined, {
+                    style: "currency",
+                    currency: "USD",
+                  })}
+                </p>
+                <div
+                  className="mt-2 h-1 rounded-full"
+                  style={{
+                    width: `${Math.max(20, 100 - i * 10)}%`,
+                    background: CHART_COLORS.palette[i % CHART_COLORS.palette.length],
+                  }}
+                />
+              </div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </AnalyticsCard>
+    </PageShell>
   );
 }

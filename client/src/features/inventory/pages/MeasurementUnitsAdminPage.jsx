@@ -1,40 +1,57 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Plus, Ruler } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   useCreateMeasurementUnitMutation,
   useDeleteMeasurementUnitMutation,
   useMeasurementUnitsQuery,
   useUpdateMeasurementUnitMutation,
 } from "@/features/inventory/hooks/useMeasurementUnits";
+import {
+  AnalyticsCard,
+  DialogForm,
+  FormField,
+  FormSection,
+  KpiCard,
+  PageHeader,
+  PageShell,
+  StatusBadge,
+} from "@/components/ui/erp";
 
 const baseTypes = ["G", "ML", "PIECE"];
 
 function normalizeNumberString(v) {
-  const s = String(v ?? "").trim();
-  return s;
+  return String(v ?? "").trim();
 }
+
+const EMPTY_CREATE = {
+  name: "",
+  symbol: "",
+  baseType: "G",
+  conversionFactor: "1",
+  isBaseUnit: false,
+};
 
 export function MeasurementUnitsAdminPage() {
   const unitsQuery = useMeasurementUnitsQuery();
-
   const createMutation = useCreateMeasurementUnitMutation();
   const updateMutation = useUpdateMeasurementUnitMutation();
   const deleteMutation = useDeleteMeasurementUnitMutation();
 
   const units = unitsQuery.data || [];
-
-  const [createForm, setCreateForm] = useState({
-    name: "",
-    symbol: "",
-    baseType: "G",
-    conversionFactor: "1",
-    isBaseUnit: false,
-  });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [createForm, setCreateForm] = useState(EMPTY_CREATE);
+  const [drafts, setDrafts] = useState({});
 
   const canCreate =
     createForm.name.trim() &&
@@ -43,34 +60,18 @@ export function MeasurementUnitsAdminPage() {
     normalizeNumberString(createForm.conversionFactor) &&
     !createMutation.isPending;
 
-  async function onCreate(e) {
-    e.preventDefault();
+  async function onCreate() {
     if (!canCreate) return;
-
-    const input = {
+    await createMutation.mutateAsync({
       name: createForm.name.trim(),
       symbol: createForm.symbol.trim(),
       baseType: createForm.baseType,
-      conversionFactor: createForm.isBaseUnit
-        ? "1"
-        : createForm.conversionFactor,
+      conversionFactor: createForm.isBaseUnit ? "1" : createForm.conversionFactor,
       isBaseUnit: createForm.isBaseUnit,
-    };
-
-    await createMutation.mutateAsync(input);
-
-    setCreateForm({
-      name: "",
-      symbol: "",
-      baseType: createForm.baseType,
-      conversionFactor: "1",
-      isBaseUnit: false,
     });
+    setCreateForm({ ...EMPTY_CREATE, baseType: createForm.baseType });
+    setDialogOpen(false);
   }
-
-  const [drafts, setDrafts] = useState({});
-
-  const draftsById = useMemo(() => drafts, [drafts]);
 
   function initDraftIfMissing(unit) {
     setDrafts((d) => {
@@ -89,9 +90,8 @@ export function MeasurementUnitsAdminPage() {
   }
 
   async function onSave(id) {
-    const draft = draftsById[id];
+    const draft = drafts[id];
     if (!draft) return;
-
     await updateMutation.mutateAsync({
       id,
       input: {
@@ -112,266 +112,258 @@ export function MeasurementUnitsAdminPage() {
     });
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-sm font-medium">Measurement Units</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Base units must have conversionFactor=1 (g/ml/piece).
-          </div>
-        </div>
+  const baseUnitCount = useMemo(
+    () => units.filter((u) => u.isBaseUnit).length,
+    [units],
+  );
 
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="secondary">
-            <Link to="/inventory/items">Back to items</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/inventory/dashboard">Inventory</Link>
-          </Button>
-        </div>
+  return (
+    <PageShell>
+      <PageHeader
+        title="Measurement Units"
+        subtitle="Base units must have conversionFactor=1 (g/ml/piece)."
+        actions={
+          <>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/inventory/items">Items</Link>
+            </Button>
+            <Button asChild variant="secondary" className="rounded-xl">
+              <Link to="/inventory/dashboard">Inventory</Link>
+            </Button>
+            <Button className="rounded-xl" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create unit
+            </Button>
+          </>
+        }
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <KpiCard
+          label="Total units"
+          value={units.length}
+          icon={Ruler}
+          accent="blue"
+          loading={unitsQuery.isLoading}
+        />
+        <KpiCard
+          label="Base units"
+          value={baseUnitCount}
+          hint="g, ml, or piece anchors"
+          accent="purple"
+          loading={unitsQuery.isLoading}
+        />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Create Unit</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onCreate} className="grid gap-3 md:grid-cols-6">
-            <div className="md:col-span-2">
-              <div className="text-xs text-muted-foreground">Name</div>
-              <Input
-                value={createForm.name}
-                onChange={(e) =>
-                  setCreateForm((f) => ({ ...f, name: e.target.value }))
-                }
-                placeholder="e.g. Gram"
-              />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Symbol</div>
-              <Input
-                value={createForm.symbol}
-                onChange={(e) =>
-                  setCreateForm((f) => ({ ...f, symbol: e.target.value }))
-                }
-                placeholder="e.g. g"
-              />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Base Type</div>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                value={createForm.baseType}
-                onChange={(e) =>
-                  setCreateForm((f) => ({ ...f, baseType: e.target.value }))
-                }
-              >
+      <AnalyticsCard title="Units catalog" accent="indigo">
+        <div className="overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <tr className="border-b">
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Symbol</th>
+                <th className="px-4 py-3">Base type</th>
+                <th className="px-4 py-3">Factor</th>
+                <th className="px-4 py-3">Base?</th>
+                <th className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unitsQuery.isLoading ? (
+                <tr>
+                  <td className="px-4 py-6 text-muted-foreground" colSpan={6}>
+                    Loading…
+                  </td>
+                </tr>
+              ) : units.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-6 text-muted-foreground" colSpan={6}>
+                    No units yet.
+                  </td>
+                </tr>
+              ) : (
+                units.map((u, idx) => {
+                  const draft = drafts[u.id];
+                  const row = draft || {
+                    name: u.name,
+                    symbol: u.symbol,
+                    baseType: u.baseType,
+                    conversionFactor: String(u.conversionFactor ?? "1"),
+                    isBaseUnit: Boolean(u.isBaseUnit),
+                  };
+
+                  return (
+                    <tr
+                      key={u.id}
+                      className={`border-b border-border/50 transition-colors hover:bg-muted/30 last:border-b-0 ${idx % 2 === 1 ? "bg-muted/10" : ""}`}
+                      onMouseEnter={() => initDraftIfMissing(u)}
+                    >
+                      <td className="px-4 py-3">
+                        <Input
+                          value={row.name}
+                          onChange={(e) =>
+                            setDrafts((d) => ({
+                              ...d,
+                              [u.id]: { ...row, name: e.target.value },
+                            }))
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Input
+                          value={row.symbol}
+                          onChange={(e) =>
+                            setDrafts((d) => ({
+                              ...d,
+                              [u.id]: { ...row, symbol: e.target.value },
+                            }))
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status="operational" label={row.baseType} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Input
+                          value={row.isBaseUnit ? "1" : row.conversionFactor}
+                          disabled={row.isBaseUnit}
+                          onChange={(e) =>
+                            setDrafts((d) => ({
+                              ...d,
+                              [u.id]: {
+                                ...row,
+                                conversionFactor: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-input"
+                          checked={row.isBaseUnit}
+                          onChange={(e) =>
+                            setDrafts((d) => ({
+                              ...d,
+                              [u.id]: {
+                                ...row,
+                                isBaseUnit: e.target.checked,
+                                conversionFactor: e.target.checked
+                                  ? "1"
+                                  : row.conversionFactor,
+                              },
+                            }))
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="rounded-lg"
+                            onClick={() => onSave(u.id)}
+                            disabled={updateMutation.isPending}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-lg"
+                            onClick={() => onDelete(u.id)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </AnalyticsCard>
+
+      <DialogForm
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="Create measurement unit"
+        onSubmit={onCreate}
+        submitLabel="Create unit"
+        loading={createMutation.isPending}
+        size="lg"
+      >
+        <FormSection title="Unit definition">
+          <FormField label="Name">
+            <Input
+              value={createForm.name}
+              onChange={(e) =>
+                setCreateForm((f) => ({ ...f, name: e.target.value }))
+              }
+              placeholder="e.g. Gram"
+            />
+          </FormField>
+          <FormField label="Symbol">
+            <Input
+              value={createForm.symbol}
+              onChange={(e) =>
+                setCreateForm((f) => ({ ...f, symbol: e.target.value }))
+              }
+              placeholder="e.g. g"
+            />
+          </FormField>
+          <FormField label="Base type">
+            <Select
+              value={createForm.baseType}
+              onValueChange={(v) => setCreateForm((f) => ({ ...f, baseType: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {baseTypes.map((t) => (
-                  <option key={t} value={t}>
+                  <SelectItem key={t} value={t}>
                     {t}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">
-                Conversion Factor
-              </div>
-              <Input
-                value={
-                  createForm.isBaseUnit ? "1" : createForm.conversionFactor
-                }
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Conversion factor">
+            <Input
+              value={createForm.isBaseUnit ? "1" : createForm.conversionFactor}
+              disabled={createForm.isBaseUnit}
+              onChange={(e) =>
+                setCreateForm((f) => ({
+                  ...f,
+                  conversionFactor: e.target.value,
+                }))
+              }
+              placeholder="e.g. 1000"
+            />
+          </FormField>
+          <FormField label="Base unit" fullWidth>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded"
+                checked={createForm.isBaseUnit}
                 onChange={(e) =>
                   setCreateForm((f) => ({
                     ...f,
-                    conversionFactor: e.target.value,
+                    isBaseUnit: e.target.checked,
+                    conversionFactor: e.target.checked ? "1" : f.conversionFactor,
                   }))
                 }
-                disabled={createForm.isBaseUnit}
-                placeholder="e.g. 1000"
               />
-            </div>
-            <div className="flex items-end gap-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4"
-                  checked={createForm.isBaseUnit}
-                  onChange={(e) =>
-                    setCreateForm((f) => ({
-                      ...f,
-                      isBaseUnit: e.target.checked,
-                      conversionFactor: e.target.checked
-                        ? "1"
-                        : f.conversionFactor,
-                    }))
-                  }
-                />
-                Base unit
-              </label>
-            </div>
-            <div className="md:col-span-6">
-              <Button type="submit" disabled={!canCreate}>
-                {createMutation.isPending ? "Creating…" : "Create unit"}
-              </Button>
-              {unitsQuery.isLoading && (
-                <span className="ml-3 text-xs text-muted-foreground">
-                  Loading…
-                </span>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Units</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Name</th>
-                  <th className="py-2">Symbol</th>
-                  <th className="py-2">Base Type</th>
-                  <th className="py-2">Factor</th>
-                  <th className="py-2">Base?</th>
-                  <th className="py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {unitsQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={6}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : units.length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={6}>
-                      No units yet.
-                    </td>
-                  </tr>
-                ) : (
-                  units.map((u) => {
-                    const draft = draftsById[u.id];
-                    const row = draft || {
-                      name: u.name,
-                      symbol: u.symbol,
-                      baseType: u.baseType,
-                      conversionFactor: String(u.conversionFactor ?? "1"),
-                      isBaseUnit: Boolean(u.isBaseUnit),
-                    };
-
-                    return (
-                      <tr
-                        key={u.id}
-                        className="border-b last:border-b-0"
-                        onMouseEnter={() => initDraftIfMissing(u)}
-                      >
-                        <td className="py-2">
-                          <Input
-                            value={row.name}
-                            onChange={(e) =>
-                              setDrafts((d) => ({
-                                ...d,
-                                [u.id]: { ...row, name: e.target.value },
-                              }))
-                            }
-                          />
-                        </td>
-                        <td className="py-2">
-                          <Input
-                            value={row.symbol}
-                            onChange={(e) =>
-                              setDrafts((d) => ({
-                                ...d,
-                                [u.id]: { ...row, symbol: e.target.value },
-                              }))
-                            }
-                          />
-                        </td>
-                        <td className="py-2">
-                          <select
-                            className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                            value={row.baseType}
-                            disabled
-                          >
-                            {baseTypes.map((t) => (
-                              <option key={t} value={t}>
-                                {t}
-                              </option>
-                            ))}
-                          </select>
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            Base type is immutable.
-                          </div>
-                        </td>
-                        <td className="py-2">
-                          <Input
-                            value={row.isBaseUnit ? "1" : row.conversionFactor}
-                            disabled={row.isBaseUnit}
-                            onChange={(e) =>
-                              setDrafts((d) => ({
-                                ...d,
-                                [u.id]: {
-                                  ...row,
-                                  conversionFactor: e.target.value,
-                                },
-                              }))
-                            }
-                          />
-                        </td>
-                        <td className="py-2">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4"
-                            checked={row.isBaseUnit}
-                            onChange={(e) =>
-                              setDrafts((d) => ({
-                                ...d,
-                                [u.id]: {
-                                  ...row,
-                                  isBaseUnit: e.target.checked,
-                                  conversionFactor: e.target.checked
-                                    ? "1"
-                                    : row.conversionFactor,
-                                },
-                              }))
-                            }
-                          />
-                        </td>
-                        <td className="py-2">
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => onSave(u.id)}
-                              disabled={updateMutation.isPending}
-                            >
-                              Save
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => onDelete(u.id)}
-                              disabled={deleteMutation.isPending}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              This is a base unit (conversion factor = 1)
+            </label>
+          </FormField>
+        </FormSection>
+      </DialogForm>
+    </PageShell>
   );
 }

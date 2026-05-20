@@ -1,164 +1,176 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Plus, Truck } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 import {
   useCreateSupplierMutation,
   useSuppliersQuery,
 } from "@/features/inventory/hooks/useSuppliers";
+import {
+  DataTable,
+  DialogForm,
+  FormField,
+  FormRow,
+  FormSection,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+} from "@/components/ui/erp";
+
+const EMPTY_FORM = { name: "", email: "", phone: "", address: "" };
 
 export function SupplierManagementPage() {
   const suppliersQuery = useSuppliersQuery();
   const createMutation = useCreateSupplierMutation();
-
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-  });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const canSubmit = form.name.trim().length > 0 && !createMutation.isPending;
 
-  async function onSubmit(e) {
-    e.preventDefault();
+  async function onSubmit() {
     if (!canSubmit) return;
-
     await createMutation.mutateAsync({
       name: form.name.trim(),
       email: form.email.trim() ? form.email.trim() : undefined,
       phone: form.phone.trim() ? form.phone.trim() : undefined,
       address: form.address.trim() ? form.address.trim() : undefined,
     });
-
-    setForm({ name: "", email: "", phone: "", address: "" });
+    setForm(EMPTY_FORM);
+    setDialogOpen(false);
   }
 
   const suppliers = suppliersQuery.data || [];
 
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ getValue }) => (
+          <span className="font-medium">{getValue()}</span>
+        ),
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ getValue }) => getValue() || "—",
+      },
+      {
+        accessorKey: "phone",
+        header: "Phone",
+        cell: ({ getValue }) => getValue() || "—",
+      },
+      {
+        accessorKey: "address",
+        header: "Address",
+        cell: ({ getValue }) => (
+          <span className="text-muted-foreground">{getValue() || "—"}</span>
+        ),
+      },
+    ],
+    [],
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-sm font-medium">Supplier Management</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Suppliers are scoped to your hotel (and optionally branch).
-          </div>
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Supplier Management"
+        subtitle="Suppliers are scoped to your hotel and optionally branch."
+        actions={
+          <>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/purchases">Purchases</Link>
+            </Button>
+            <Button asChild variant="secondary" className="rounded-xl">
+              <Link to="/inventory/dashboard">Inventory</Link>
+            </Button>
+            <Button className="rounded-xl" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add supplier
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="secondary">
-            <Link to="/purchases">Back to purchases</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/inventory/dashboard">Inventory</Link>
-          </Button>
-        </div>
-      </div>
+      <KpiGrid cols={2}>
+        <KpiCard
+          label="Total suppliers"
+          value={suppliers.length}
+          icon={Truck}
+          accent="blue"
+          loading={suppliersQuery.isLoading}
+        />
+        <KpiCard
+          label="With contact email"
+          value={suppliers.filter((s) => s.email).length}
+          hint="Reachable vendors"
+          accent="cyan"
+          loading={suppliersQuery.isLoading}
+        />
+      </KpiGrid>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Add Supplier</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-4">
-            <div className="md:col-span-2">
-              <div className="text-xs text-muted-foreground">Name</div>
+      <DataTable
+        columns={columns}
+        data={suppliers}
+        loading={suppliersQuery.isLoading}
+        searchPlaceholder="Search suppliers…"
+        emptyTitle="No suppliers yet"
+        emptyDescription="Add your first supplier to start purchasing."
+      />
+
+      <DialogForm
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="Add supplier"
+        description="Register a new vendor for purchase orders."
+        onSubmit={onSubmit}
+        submitLabel="Create supplier"
+        loading={createMutation.isPending}
+        size="lg"
+      >
+        <FormSection title="Supplier details" layout="stack">
+          <FormField label="Company name" htmlFor="supplier-name">
+            <Input
+              id="supplier-name"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. Fresh Farms Ltd"
+              required
+            />
+          </FormField>
+          <FormRow>
+            <FormField label="Email" htmlFor="supplier-email">
               <Input
-                value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
-                placeholder="e.g. Fresh Farms Ltd"
-              />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Email</div>
-              <Input
+                id="supplier-email"
+                type="email"
                 value={form.email}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, email: e.target.value }))
-                }
-                placeholder="optional"
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="vendor@example.com"
               />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Phone</div>
+            </FormField>
+            <FormField label="Phone" htmlFor="supplier-phone">
               <Input
+                id="supplier-phone"
+                type="tel"
                 value={form.phone}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, phone: e.target.value }))
-                }
-                placeholder="optional"
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="+1 555 000 0000"
               />
-            </div>
-            <div className="md:col-span-4">
-              <div className="text-xs text-muted-foreground">Address</div>
-              <Input
-                value={form.address}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, address: e.target.value }))
-                }
-                placeholder="optional"
-              />
-            </div>
-            <div className="md:col-span-4">
-              <Button type="submit" disabled={!canSubmit}>
-                {createMutation.isPending ? "Saving…" : "Create supplier"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Suppliers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Name</th>
-                  <th className="py-2">Email</th>
-                  <th className="py-2">Phone</th>
-                </tr>
-              </thead>
-              <tbody>
-                {suppliersQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={3}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : suppliers.length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={3}>
-                      No suppliers yet.
-                    </td>
-                  </tr>
-                ) : (
-                  suppliers.map((s) => (
-                    <tr key={s.id} className="border-b last:border-b-0">
-                      <td className="py-2 font-medium">{s.name}</td>
-                      <td className="py-2 text-muted-foreground">
-                        {s.email || "—"}
-                      </td>
-                      <td className="py-2 text-muted-foreground">
-                        {s.phone || "—"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            </FormField>
+          </FormRow>
+          <FormField label="Address" htmlFor="supplier-address">
+            <Input
+              id="supplier-address"
+              value={form.address}
+              onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+              placeholder="Street, city, country"
+            />
+          </FormField>
+        </FormSection>
+      </DialogForm>
+    </PageShell>
   );
 }

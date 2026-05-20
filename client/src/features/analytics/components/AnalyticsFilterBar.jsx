@@ -27,7 +27,11 @@ export function AnalyticsFilterBar({
   const f = { ...defaults, ...filters };
 
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-2xl border bg-card/80 p-5 shadow-erp backdrop-blur-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-semibold">Filters</p>
+        <span className="text-xs text-muted-foreground">Date range & scope</span>
+      </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-8">
         <div className="md:col-span-2">
           <div className="text-xs font-medium text-muted-foreground">From</div>
@@ -68,7 +72,7 @@ export function AnalyticsFilterBar({
             Menu category
           </div>
           <select
-            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+            className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm transition-colors focus:ring-2 focus:ring-ring/30"
             value={f.menuCategory}
             onChange={(e) =>
               setFilters((s) => ({ ...s, menuCategory: e.target.value }))
@@ -87,7 +91,7 @@ export function AnalyticsFilterBar({
             Supplier
           </div>
           <select
-            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+            className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm transition-colors focus:ring-2 focus:ring-ring/30"
             value={filters.supplierId || ""}
             onChange={(e) =>
               setFilters((s) => ({ ...s, supplierId: e.target.value }))
@@ -107,7 +111,7 @@ export function AnalyticsFilterBar({
             Ingredient
           </div>
           <select
-            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+            className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm transition-colors focus:ring-2 focus:ring-ring/30"
             value={filters.inventoryItemId || ""}
             onChange={(e) =>
               setFilters((s) => ({ ...s, inventoryItemId: e.target.value }))
@@ -137,12 +141,13 @@ export function AnalyticsFilterBar({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button type="button" onClick={onApply} disabled={isLoading}>
-          Apply
+        <Button type="button" className="rounded-xl" onClick={onApply} disabled={isLoading}>
+          {isLoading ? "Loading…" : "Apply filters"}
         </Button>
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
+          className="rounded-xl"
           onClick={() => setFilters(defaults)}
           disabled={isLoading}
         >

@@ -1,4 +1,6 @@
-import { Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, Tooltip } from "recharts";
+
+import { ChartTooltip, ChartWrapper, CHART_COLORS } from "@/components/ui/erp";
 
 export function MenuCategoryPie({ counts = {} }) {
   const data = [
@@ -9,23 +11,25 @@ export function MenuCategoryPie({ counts = {} }) {
   ].filter((d) => d.value > 0);
 
   return (
-    <div style={{ height: 260 }}>
-      {data.length === 0 ? (
-        <div className="text-sm text-muted-foreground">No data yet.</div>
-      ) : (
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Tooltip />
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              fill="currentColor"
-              label
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      )}
-    </div>
+    <ChartWrapper empty={data.length === 0} height={260}>
+      <PieChart>
+        <Tooltip content={<ChartTooltip />} />
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="name"
+          cx="50%"
+          cy="50%"
+          innerRadius={55}
+          outerRadius={90}
+          paddingAngle={3}
+          strokeWidth={0}
+        >
+          {data.map((_, i) => (
+            <Cell key={i} fill={CHART_COLORS.palette[i % CHART_COLORS.palette.length]} />
+          ))}
+        </Pie>
+      </PieChart>
+    </ChartWrapper>
   );
 }

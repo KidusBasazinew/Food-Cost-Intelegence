@@ -1,9 +1,14 @@
 import { useMemo, useState } from "react";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DollarSign,
+  Percent,
+  Package,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 
 import { AnalyticsFilterBar } from "@/features/analytics/components/AnalyticsFilterBar";
-import { KpiCard } from "@/features/analytics/components/KpiCard";
 import { useExecutiveDashboardQuery } from "@/features/analytics/hooks/useExecutiveDashboard";
 import {
   isoEndOfDay,
@@ -20,6 +25,16 @@ import { RevenueCostTrendChart } from "@/features/analytics/charts/RevenueCostTr
 import { MenuCategoryPie } from "@/features/analytics/charts/MenuCategoryPie";
 import { useSuppliersQuery } from "@/features/inventory/hooks/useSuppliers";
 import { useInventoryItemsQuery } from "@/features/inventory/hooks/useInventoryItems";
+import {
+  AnalyticsCard,
+  ContentGrid,
+  DataTable,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+  StatusBadge,
+} from "@/components/ui/erp";
 
 function buildParams(filters) {
   return {
@@ -63,15 +78,126 @@ export function ExecutiveFoodOpsDashboardPage() {
   const charts = data?.charts || {};
   const insights = data?.insights || {};
 
+  const profitableColumns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Meal",
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.name}</span>
+        ),
+      },
+      {
+        accessorKey: "totalSalesCount",
+        header: "Sales",
+        cell: ({ getValue }) => toNumber(getValue()),
+      },
+      {
+        accessorKey: "totalRevenueCents",
+        header: "Revenue",
+        cell: ({ getValue }) => formatMoney(getValue()),
+      },
+      {
+        accessorKey: "totalProfitCents",
+        header: "Profit",
+        cell: ({ getValue }) => (
+          <span className="font-medium text-emerald-600 dark:text-emerald-400">
+            {formatMoney(getValue())}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "engineeringCategory",
+        header: "Category",
+        cell: ({ getValue }) => (
+          <StatusBadge status="analytics" label={getValue()} />
+        ),
+      },
+    ],
+    [],
+  );
+
+  const wasteColumns = useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Ingredient",
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.name}</span>
+        ),
+      },
+      {
+        accessorKey: "totalWasteCostCents",
+        header: "Waste cost",
+        cell: ({ getValue }) => (
+          <span className="text-rose-600 dark:text-rose-400">
+            {formatMoney(getValue())}
+          </span>
+        ),
+      },
+      {
+        id: "qty",
+        header: "Qty (base)",
+        cell: ({ row }) =>
+          `${toNumber(row.original.totalWasteQuantityBaseUnit).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${row.original.baseUnitSymbol}`,
+      },
+    ],
+    [],
+  );
+
+  const forecastColumns = useMemo(
+    () => [
+      { accessorKey: "name", header: "Item" },
+      {
+        id: "stock",
+        header: "In stock",
+        cell: ({ row }) =>
+          `${toNumber(row.original.quantityInStock).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${row.original.baseUnitSymbol}`,
+      },
+      {
+        accessorKey: "averageDailyConsumption",
+        header: "Avg/day",
+        cell: ({ getValue }) =>
+          toNumber(getValue()).toLocaleString(undefined, {
+            maximumFractionDigits: 2,
+          }),
+      },
+      {
+        accessorKey: "estimatedDaysRemaining",
+        header: "Days left",
+        cell: ({ getValue }) => {
+          const days = toNumber(getValue());
+          return (
+            <StatusBadge
+              status={days <= 3 ? "critical" : days <= 7 ? "warning" : "active"}
+              label={days.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+            />
+          );
+        },
+      },
+    ],
+    [],
+  );
+
+  const supplierColumns = useMemo(
+    () => [
+      { accessorKey: "name", header: "Supplier" },
+      {
+        accessorKey: "totalSpentCents",
+        header: "Spent",
+        cell: ({ getValue }) => formatMoney(getValue()),
+      },
+      { accessorKey: "purchaseCount", header: "Purchases" },
+    ],
+    [],
+  );
+
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="text-sm font-medium">Executive Food Ops Dashboard</div>
-        <div className="mt-1 text-sm text-muted-foreground">
-          Real-time revenue, food cost, waste, menu engineering, inventory and
-          supplier intelligence.
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Executive Food Ops Dashboard"
+        subtitle="Real-time revenue, food cost, waste, menu engineering, inventory and supplier intelligence."
+      />
 
       <AnalyticsFilterBar
         filters={filters}
@@ -82,299 +208,125 @@ export function ExecutiveFoodOpsDashboardPage() {
         inventoryItems={inventoryItems}
       />
 
-      <div className="grid gap-4 md:grid-cols-6">
+      <KpiGrid cols={6}>
         <KpiCard
           label="Food revenue"
           value={formatMoney(kpis.totalFoodRevenueCents)}
+          icon={DollarSign}
+          accent="purple"
+          loading={q.isLoading}
         />
         <KpiCard
           label="Ingredient cost"
           value={formatMoney(kpis.totalIngredientCostCents)}
+          icon={TrendingDown}
+          accent="amber"
+          loading={q.isLoading}
         />
         <KpiCard
           label="Food cost %"
           value={formatPct(kpis.foodCostPercentage)}
+          icon={Percent}
+          accent="indigo"
+          loading={q.isLoading}
         />
         <KpiCard
           label="Gross profit"
           value={formatMoney(kpis.grossProfitCents)}
+          icon={TrendingUp}
+          accent="emerald"
+          loading={q.isLoading}
         />
         <KpiCard
           label="Waste losses"
           value={formatMoney(kpis.wasteLossCents)}
+          icon={Trash2}
+          accent="rose"
+          loading={q.isLoading}
         />
         <KpiCard
           label="Inventory value"
           value={formatMoney(kpis.inventoryValueCents)}
+          icon={Package}
+          accent="blue"
+          loading={q.isLoading}
         />
-      </div>
+      </KpiGrid>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Revenue vs Ingredient Cost
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {q.isLoading ? (
-              <div className="text-sm text-muted-foreground">Loading…</div>
-            ) : (
-              <RevenueCostTrendChart
-                dailyRevenue={charts.dailyRevenue}
-                dailyIngredientCost={charts.dailyIngredientCost}
-              />
-            )}
-          </CardContent>
-        </Card>
+      <ContentGrid>
+        <AnalyticsCard
+          title="Revenue vs Ingredient Cost"
+          description="Daily trend comparison"
+          accent="purple"
+          loading={q.isLoading}
+        >
+          <RevenueCostTrendChart
+            dailyRevenue={charts.dailyRevenue}
+            dailyIngredientCost={charts.dailyIngredientCost}
+          />
+        </AnalyticsCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Menu Engineering Mix
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {q.isLoading ? (
-              <div className="text-sm text-muted-foreground">Loading…</div>
-            ) : (
-              <MenuCategoryPie counts={charts.menuCategoryCounts} />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        <AnalyticsCard
+          title="Menu Engineering Mix"
+          description="BCG category distribution"
+          accent="blue"
+          loading={q.isLoading}
+        >
+          <MenuCategoryPie counts={charts.menuCategoryCounts} />
+        </AnalyticsCard>
+      </ContentGrid>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Top Profitable Meals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-muted-foreground">
-                  <tr className="border-b">
-                    <th className="py-2">Meal</th>
-                    <th className="py-2">Sales</th>
-                    <th className="py-2">Revenue</th>
-                    <th className="py-2">Profit</th>
-                    <th className="py-2">Category</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {q.isLoading ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={5}>
-                        Loading…
-                      </td>
-                    </tr>
-                  ) : (insights.topProfitableMeals || []).length === 0 ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={5}>
-                        No data yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    insights.topProfitableMeals.map((m) => (
-                      <tr key={m.recipeId} className="border-b last:border-b-0">
-                        <td className="py-2 font-medium">{m.name}</td>
-                        <td className="py-2">{toNumber(m.totalSalesCount)}</td>
-                        <td className="py-2">
-                          {formatMoney(m.totalRevenueCents)}
-                        </td>
-                        <td className="py-2">
-                          {formatMoney(m.totalProfitCents)}
-                        </td>
-                        <td className="py-2">{m.engineeringCategory}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+      <ContentGrid>
+        <AnalyticsCard title="Top Profitable Meals" accent="emerald">
+          <DataTable
+            columns={profitableColumns}
+            data={insights.topProfitableMeals || []}
+            loading={q.isLoading}
+            enableSearch={false}
+            pageSize={8}
+            emptyTitle="No profitable meals yet"
+          />
+        </AnalyticsCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Waste: Most Wasted Ingredients
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-muted-foreground">
-                  <tr className="border-b">
-                    <th className="py-2">Ingredient</th>
-                    <th className="py-2">Waste cost</th>
-                    <th className="py-2">Qty (base)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {q.isLoading ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={3}>
-                        Loading…
-                      </td>
-                    </tr>
-                  ) : (insights.mostWastedIngredients || []).length === 0 ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={3}>
-                        No data yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    insights.mostWastedIngredients.map((x) => (
-                      <tr
-                        key={x.inventoryItemId}
-                        className="border-b last:border-b-0"
-                      >
-                        <td className="py-2 font-medium">{x.name}</td>
-                        <td className="py-2">
-                          {formatMoney(x.totalWasteCostCents)}
-                        </td>
-                        <td className="py-2">
-                          {toNumber(
-                            x.totalWasteQuantityBaseUnit,
-                          ).toLocaleString(undefined, {
-                            maximumFractionDigits: 2,
-                          })}{" "}
-                          {x.baseUnitSymbol}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <AnalyticsCard title="Most Wasted Ingredients" accent="rose">
+          <DataTable
+            columns={wasteColumns}
+            data={insights.mostWastedIngredients || []}
+            loading={q.isLoading}
+            enableSearch={false}
+            pageSize={8}
+            emptyTitle="No waste data yet"
+          />
+        </AnalyticsCard>
+      </ContentGrid>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Inventory Forecast (Days Remaining)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-muted-foreground">
-                  <tr className="border-b">
-                    <th className="py-2">Item</th>
-                    <th className="py-2">In stock</th>
-                    <th className="py-2">Avg/day</th>
-                    <th className="py-2">Days left</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {q.isLoading ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={4}>
-                        Loading…
-                      </td>
-                    </tr>
-                  ) : (insights.lowStockForecast || []).length === 0 ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={4}>
-                        No data yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    insights.lowStockForecast.map((i) => (
-                      <tr
-                        key={i.inventoryItemId}
-                        className="border-b last:border-b-0"
-                      >
-                        <td className="py-2 font-medium">{i.name}</td>
-                        <td className="py-2">
-                          {toNumber(i.quantityInStock).toLocaleString(
-                            undefined,
-                            {
-                              maximumFractionDigits: 2,
-                            },
-                          )}{" "}
-                          {i.baseUnitSymbol}
-                        </td>
-                        <td className="py-2">
-                          {toNumber(i.averageDailyConsumption).toLocaleString(
-                            undefined,
-                            {
-                              maximumFractionDigits: 2,
-                            },
-                          )}
-                        </td>
-                        <td className="py-2">
-                          {toNumber(i.estimatedDaysRemaining).toLocaleString(
-                            undefined,
-                            {
-                              maximumFractionDigits: 1,
-                            },
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+      <ContentGrid>
+        <AnalyticsCard
+          title="Inventory Forecast"
+          description="Days remaining at current consumption"
+          accent="cyan"
+        >
+          <DataTable
+            columns={forecastColumns}
+            data={insights.lowStockForecast || []}
+            loading={q.isLoading}
+            enableSearch={false}
+            pageSize={8}
+            emptyTitle="No forecast data yet"
+          />
+        </AnalyticsCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Supplier Spending
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-muted-foreground">
-                  <tr className="border-b">
-                    <th className="py-2">Supplier</th>
-                    <th className="py-2">Spent</th>
-                    <th className="py-2">Purchases</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {q.isLoading ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={3}>
-                        Loading…
-                      </td>
-                    </tr>
-                  ) : (insights.supplierSpending || []).length === 0 ? (
-                    <tr>
-                      <td className="py-3 text-muted-foreground" colSpan={3}>
-                        No data yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    insights.supplierSpending.map((s) => (
-                      <tr
-                        key={s.supplierId}
-                        className="border-b last:border-b-0"
-                      >
-                        <td className="py-2 font-medium">{s.name}</td>
-                        <td className="py-2">
-                          {formatMoney(s.totalSpentCents)}
-                        </td>
-                        <td className="py-2">{s.purchaseCount}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <AnalyticsCard title="Supplier Spending" accent="amber">
+          <DataTable
+            columns={supplierColumns}
+            data={insights.supplierSpending || []}
+            loading={q.isLoading}
+            enableSearch={false}
+            pageSize={8}
+            emptyTitle="No supplier spending yet"
+          />
+        </AnalyticsCard>
+      </ContentGrid>
+    </PageShell>
   );
 }

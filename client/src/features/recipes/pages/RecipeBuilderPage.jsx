@@ -1,9 +1,24 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AnalyticsCard,
+  FormField,
+  InsightPanel,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+} from "@/components/ui/erp";
 
 import { useInventoryItemsQuery } from "@/features/inventory/hooks/useInventoryItems";
 import { useMeasurementUnitsQuery } from "@/features/inventory/hooks/useMeasurementUnits";
@@ -155,181 +170,126 @@ export function RecipeBuilderPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-medium">Recipe Builder</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {recipe ? recipe.name : "Loading…"}
+    <PageShell>
+      <PageHeader
+        title={recipe ? `Builder: ${recipe.name}` : "Recipe Builder"}
+        subtitle="Add ingredients and recalculate live food cost from inventory."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              className="rounded-xl"
+              onClick={() => recalcMutation.mutate(id)}
+              disabled={!id || recalcMutation.isPending}
+            >
+              {recalcMutation.isPending ? "Recalculating…" : "Recalculate cost"}
+            </Button>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to={`/recipes/${id}`}>Details</Link>
+            </Button>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/recipes">Back</Link>
+            </Button>
+          </>
+        }
+      />
+
+      <KpiGrid cols={4}>
+        <KpiCard label="Total cost" value={formatMoney(recipe?.totalCostCents)} accent="amber" loading={recipeQuery.isLoading} />
+        <KpiCard label="Selling" value={formatMoney(recipe?.sellingPriceCents)} accent="blue" loading={recipeQuery.isLoading} />
+        <KpiCard label="Profit" value={formatMoney(recipe?.estimatedProfitCents)} accent="emerald" loading={recipeQuery.isLoading} />
+        <KpiCard
+          label="Margin"
+          value={`${toNumber(recipe?.estimatedProfitMargin).toFixed(1)}%`}
+          accent="purple"
+          loading={recipeQuery.isLoading}
+        />
+      </KpiGrid>
+
+      <InsightPanel variant="analytics" title="Live costing">
+        Costs update automatically from weighted average inventory prices when you add or edit ingredients.
+      </InsightPanel>
+
+      <AnalyticsCard title="Add ingredient" accent="purple">
+        <form onSubmit={onAdd} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <FormField label="Inventory item" className="sm:col-span-2">
+            <Select
+              value={form.inventoryItemId}
+              onValueChange={(v) => {
+                const nextItem = v ? itemById.get(v) : null;
+                setForm((f) => ({
+                  ...f,
+                  inventoryItemId: v,
+                  unitId: nextItem?.baseUnitId ?? "",
+                }));
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select item…" />
+              </SelectTrigger>
+              <SelectContent>
+                {items.map((i) => (
+                  <SelectItem key={i.id} value={i.id}>
+                    {i.name} (base: {i.baseUnit?.symbol})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Unit">
+            <Select
+              value={form.unitId}
+              onValueChange={(v) => setForm((f) => ({ ...f, unitId: v }))}
+              disabled={!selectedItem}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Unit…" />
+              </SelectTrigger>
+              <SelectContent>
+                {allowedUnits.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name} ({u.symbol})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Quantity">
+            <Input
+              value={form.quantity}
+              onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+              placeholder="e.g. 200"
+            />
+          </FormField>
+          <FormField label="Notes (optional)" className="sm:col-span-2 lg:col-span-4">
+            <Input
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              placeholder="e.g. chopped"
+            />
+          </FormField>
+          <div className="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-4">
+            <Button type="submit" className="rounded-xl" disabled={!canAdd}>
+              {addMutation.isPending ? "Adding…" : "Add ingredient"}
+            </Button>
+            {est ? (
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                Est: {est.qtyBase.toLocaleString(undefined, { maximumFractionDigits: 4 })}{" "}
+                {est.baseSymbol} → {formatMoney(est.totalCostCents)}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Select item, unit, and quantity to preview cost.
+              </span>
+            )}
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => recalcMutation.mutate(id)}
-            disabled={!id || recalcMutation.isPending}
-          >
-            {recalcMutation.isPending ? "Recalculating…" : "Recalculate cost"}
-          </Button>
-          <Button asChild variant="outline">
-            <Link to={`/recipes/${id}`}>Details</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/recipes">Back</Link>
-          </Button>
-        </div>
-      </div>
+        </form>
+      </AnalyticsCard>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Live Costing</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Total cost</span>
-              <span className="font-medium">
-                {formatMoney(recipe?.totalCostCents)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Selling price</span>
-              <span className="font-medium">
-                {formatMoney(recipe?.sellingPriceCents)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Profit</span>
-              <span className="font-medium">
-                {formatMoney(recipe?.estimatedProfitCents)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Profit margin</span>
-              <span className="font-medium">
-                {toNumber(recipe?.estimatedProfitMargin).toLocaleString(
-                  undefined,
-                  {
-                    maximumFractionDigits: 2,
-                  },
-                )}
-                %
-              </span>
-            </div>
-            <div className="pt-2 text-xs text-muted-foreground">
-              Costs update from weighted average inventory costs.
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              Add Ingredient
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onAdd} className="grid gap-3 md:grid-cols-4">
-              <div className="md:col-span-2">
-                <div className="text-xs text-muted-foreground">
-                  Inventory item
-                </div>
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={form.inventoryItemId}
-                  onChange={(e) => {
-                    const nextId = e.target.value;
-                    const nextItem = nextId ? itemById.get(nextId) : null;
-                    setForm((f) => ({
-                      ...f,
-                      inventoryItemId: nextId,
-                      unitId: nextItem?.baseUnitId ?? "",
-                    }));
-                  }}
-                >
-                  <option value="">Select…</option>
-                  {items.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name} (base: {i.baseUnit?.symbol})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="text-xs text-muted-foreground">Unit</div>
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={form.unitId}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, unitId: e.target.value }))
-                  }
-                  disabled={!selectedItem}
-                >
-                  <option value="">Select…</option>
-                  {allowedUnits.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.symbol})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="text-xs text-muted-foreground">Quantity</div>
-                <Input
-                  value={form.quantity}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, quantity: e.target.value }))
-                  }
-                  placeholder="e.g. 200"
-                />
-              </div>
-
-              <div className="md:col-span-4">
-                <div className="text-xs text-muted-foreground">
-                  Notes (optional)
-                </div>
-                <Input
-                  value={form.notes}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, notes: e.target.value }))
-                  }
-                  placeholder="e.g. chopped"
-                />
-              </div>
-
-              <div className="md:col-span-4 flex flex-wrap items-center gap-3">
-                <Button type="submit" disabled={!canAdd}>
-                  {addMutation.isPending ? "Adding…" : "Add ingredient"}
-                </Button>
-                {est ? (
-                  <div className="text-xs text-muted-foreground">
-                    Est:{" "}
-                    {est.qtyBase.toLocaleString(undefined, {
-                      maximumFractionDigits: 4,
-                    })}{" "}
-                    {est.baseSymbol} → {formatMoney(est.totalCostCents)}
-                  </div>
-                ) : (
-                  <div className="text-xs text-muted-foreground">
-                    Select item/unit and enter quantity to preview.
-                  </div>
-                )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Ingredients</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+      <AnalyticsCard title="Ingredients" accent="indigo">
+        <div className="overflow-x-auto rounded-xl border">
             <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
+              <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <tr className="border-b">
                   <th className="py-2">Item</th>
                   <th className="py-2">Qty (unit)</th>
@@ -362,7 +322,7 @@ export function RecipeBuilderPage() {
                       : units;
 
                     return (
-                      <tr key={ing.id} className="border-b last:border-b-0">
+                      <tr key={ing.id} className="border-b border-border/50 transition-colors hover:bg-muted/30 last:border-b-0">
                         <td className="py-2">
                           <div className="font-medium">
                             {ing.inventoryItem?.name}
@@ -386,7 +346,7 @@ export function RecipeBuilderPage() {
                                 }
                               />
                               <select
-                                className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                                className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
                                 value={edit.unitId}
                                 onChange={(e) =>
                                   setEdit((s) => ({
@@ -469,8 +429,7 @@ export function RecipeBuilderPage() {
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+      </AnalyticsCard>
+    </PageShell>
   );
 }

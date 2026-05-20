@@ -1,8 +1,16 @@
+import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ChefHat, DollarSign, Percent, TrendingUp } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
+import {
+  AnalyticsCard,
+  DataTable,
+  KpiCard,
+  KpiGrid,
+  PageHeader,
+  PageShell,
+} from "@/components/ui/erp";
 import { useRecipeQuery } from "@/features/recipes/hooks/useRecipes";
 
 function toNumber(value) {
@@ -13,8 +21,7 @@ function toNumber(value) {
 }
 
 function formatMoney(cents) {
-  const v = toNumber(cents) / 100;
-  return v.toLocaleString(undefined, {
+  return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
@@ -26,132 +33,106 @@ export function RecipeDetailsPage() {
   const recipeQuery = useRecipeQuery(id);
   const recipe = recipeQuery.data;
 
+  const columns = useMemo(
+    () => [
+      {
+        id: "item",
+        header: "Item",
+        cell: ({ row }) => (
+          <div>
+            <span className="font-medium">{row.original.inventoryItem?.name}</span>
+            <div className="text-xs text-muted-foreground">
+              Base: {row.original.inventoryItem?.baseUnit?.symbol}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: "qtyUnit",
+        header: "Qty (unit)",
+        cell: ({ row }) =>
+          `${toNumber(row.original.quantity)} ${row.original.unit?.symbol}`,
+      },
+      {
+        id: "qtyBase",
+        header: "Qty (base)",
+        cell: ({ row }) =>
+          `${toNumber(row.original.quantityInBaseUnit)} ${row.original.inventoryItem?.baseUnit?.symbol}`,
+      },
+      {
+        id: "costBase",
+        header: "Cost / base",
+        cell: ({ row }) => formatMoney(row.original.costPerBaseUnitCents),
+      },
+      {
+        id: "total",
+        header: "Total cost",
+        cell: ({ row }) => (
+          <span className="font-medium">{formatMoney(row.original.totalCostCents)}</span>
+        ),
+      },
+    ],
+    [],
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-medium">Recipe Details</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {recipe ? recipe.name : "Loading…"}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="secondary">
-            <Link to={`/recipes/${id}/builder`}>Open builder</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/recipes">Back</Link>
-          </Button>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title={recipe?.name || "Recipe Details"}
+        subtitle="Cost breakdown and ingredient bill of materials."
+        actions={
+          <>
+            <Button asChild className="rounded-xl">
+              <Link to={`/recipes/${id}/builder`}>Open builder</Link>
+            </Button>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/recipes">Back to recipes</Link>
+            </Button>
+          </>
+        }
+      />
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Total Cost
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-lg font-medium">
-            {formatMoney(recipe?.totalCostCents)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Selling Price
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-lg font-medium">
-            {formatMoney(recipe?.sellingPriceCents)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Profit
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-lg font-medium">
-            {formatMoney(recipe?.estimatedProfitCents)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Profit Margin
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-lg font-medium">
-            {toNumber(recipe?.estimatedProfitMargin).toLocaleString(undefined, {
-              maximumFractionDigits: 2,
-            })}
-            %
-          </CardContent>
-        </Card>
-      </div>
+      <KpiGrid cols={4}>
+        <KpiCard
+          label="Total cost"
+          value={formatMoney(recipe?.totalCostCents)}
+          icon={DollarSign}
+          accent="amber"
+          loading={recipeQuery.isLoading}
+        />
+        <KpiCard
+          label="Selling price"
+          value={formatMoney(recipe?.sellingPriceCents)}
+          icon={TrendingUp}
+          accent="blue"
+          loading={recipeQuery.isLoading}
+        />
+        <KpiCard
+          label="Profit"
+          value={formatMoney(recipe?.estimatedProfitCents)}
+          icon={ChefHat}
+          accent="emerald"
+          loading={recipeQuery.isLoading}
+        />
+        <KpiCard
+          label="Margin"
+          value={`${toNumber(recipe?.estimatedProfitMargin).toFixed(1)}%`}
+          icon={Percent}
+          accent="purple"
+          loading={recipeQuery.isLoading}
+        />
+      </KpiGrid>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Ingredients</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Item</th>
-                  <th className="py-2">Quantity (unit)</th>
-                  <th className="py-2">Quantity (base)</th>
-                  <th className="py-2">Cost / Base</th>
-                  <th className="py-2">Total Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recipeQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={5}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : (recipe?.ingredients || []).length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={5}>
-                      No ingredients yet.
-                    </td>
-                  </tr>
-                ) : (
-                  recipe.ingredients.map((ing) => (
-                    <tr key={ing.id} className="border-b last:border-b-0">
-                      <td className="py-2">
-                        <div className="font-medium">
-                          {ing.inventoryItem?.name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Base: {ing.inventoryItem?.baseUnit?.symbol}
-                        </div>
-                      </td>
-                      <td className="py-2">
-                        {toNumber(ing.quantity)} {ing.unit?.symbol}
-                      </td>
-                      <td className="py-2">
-                        {toNumber(ing.quantityInBaseUnit)}{" "}
-                        {ing.inventoryItem?.baseUnit?.symbol}
-                      </td>
-                      <td className="py-2">
-                        {formatMoney(ing.costPerBaseUnitCents)}
-                      </td>
-                      <td className="py-2">
-                        {formatMoney(ing.totalCostCents)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      <AnalyticsCard title="Ingredients" accent="indigo">
+        <DataTable
+          columns={columns}
+          data={recipe?.ingredients || []}
+          loading={recipeQuery.isLoading}
+          enableSearch={false}
+          emptyTitle="No ingredients yet"
+          emptyDescription="Open the builder to add ingredients to this recipe."
+        />
+      </AnalyticsCard>
+    </PageShell>
   );
 }
