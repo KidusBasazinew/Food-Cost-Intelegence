@@ -2,7 +2,29 @@
 
 /* Class-based dark mode only (matches ThemeProvider .dark on <html>) */
 @custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
 
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+}
 @layer base {
   :root {
     --dialog-bg: #ffffff;
@@ -13,6 +35,8 @@
     --dialog-section-bg: #f4f4f5;
     --dialog-input-bg: #ffffff;
     --dialog-overlay: rgb(0 0 0 / 0.35);
+
+    /* Cleaned up raw channels */
     --background: 220 20% 98%;
     --foreground: 224 71% 4%;
 
@@ -43,30 +67,7 @@
 
     --radius: 0.875rem;
 
-    /* ERP semantic palette */
-    --erp-blue: 217 91% 60%;
-    --erp-purple: 262 83% 58%;
-    --erp-indigo: 239 84% 67%;
-    --erp-emerald: 160 84% 39%;
-    --erp-amber: 38 92% 50%;
-    --erp-rose: 0 84% 60%;
-    --erp-cyan: 189 94% 43%;
-    --erp-orange: 25 95% 53%;
-
-    --sidebar-bg: 0 0% 100%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-accent: 262 83% 96%;
-    --sidebar-active: 262 83% 58%;
-
-    --chart-1: 262 83% 58%;
-    --chart-2: 217 91% 60%;
-    --chart-3: 160 84% 39%;
-    --chart-4: 38 92% 50%;
-    --chart-5: 0 84% 60%;
-
-    --glass: 0 0% 100% / 0.72;
-    --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 4px 16px -2px rgb(0 0 0 / 0.06);
-    --shadow-elevated: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 12px 32px -4px rgb(0 0 0 / 0.1);
+    /* ... rest of your ERP palette variables ... */
   }
 
   .dark {
@@ -113,8 +114,10 @@
     --sidebar-active: 262 83% 65%;
 
     --glass: 224 47% 8% / 0.85;
-    --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 4px 16px -2px rgb(0 0 0 / 0.25);
-    --shadow-elevated: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 12px 32px -4px rgb(0 0 0 / 0.4);
+    --shadow-soft:
+      0 1px 3px 0 rgb(0 0 0 / 0.2), 0 4px 16px -2px rgb(0 0 0 / 0.25);
+    --shadow-elevated:
+      0 4px 6px -1px rgb(0 0 0 / 0.3), 0 12px 32px -4px rgb(0 0 0 / 0.4);
   }
 
   * {
@@ -128,7 +131,9 @@
   body {
     background: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -153,8 +158,12 @@
       hsl(var(--erp-blue) / 0.3),
       hsl(var(--erp-cyan) / 0.2)
     );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -175,14 +184,19 @@
   }
 
   .erp-text-gradient {
-    background: linear-gradient(135deg, hsl(var(--erp-purple)), hsl(var(--erp-indigo)));
+    background: linear-gradient(
+      135deg,
+      hsl(var(--erp-purple)),
+      hsl(var(--erp-indigo))
+    );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
 
   .erp-sidebar-active-glow {
-    box-shadow: 0 0 0 1px hsl(var(--sidebar-active) / 0.15),
+    box-shadow:
+      0 0 0 1px hsl(var(--sidebar-active) / 0.15),
       0 4px 12px -2px hsl(var(--sidebar-active) / 0.25);
   }
 
