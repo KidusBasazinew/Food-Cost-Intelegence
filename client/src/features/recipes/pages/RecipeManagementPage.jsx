@@ -48,6 +48,7 @@ const EMPTY_FORM = {
   yieldQuantity: "1",
   yieldUnitId: "",
   sellingPriceCents: "0",
+  imageUrl: null,
   status: "ACTIVE",
 };
 
@@ -62,12 +63,15 @@ export function RecipeManagementPage() {
   const recipes = recipesQuery.data || [];
 
   const canSubmit =
-    form.name.trim().length > 0 && form.yieldUnitId && !createMutation.isPending;
+    form.name.trim().length > 0 &&
+    form.yieldUnitId &&
+    !createMutation.isPending;
 
   async function onSubmit() {
     if (!canSubmit) return;
     await createMutation.mutateAsync({
       name: form.name.trim(),
+      imageUrl: form.imageUrl?.trim() || null,
       yieldQuantity: form.yieldQuantity,
       yieldUnitId: form.yieldUnitId,
       sellingPriceCents: form.sellingPriceCents,
@@ -90,15 +94,22 @@ export function RecipeManagementPage() {
         accessorKey: "name",
         header: "Recipe",
         cell: ({ row }) => (
-          <div>
-            <Link
-              className="font-medium text-primary hover:underline"
-              to={`/recipes/${row.original.id}`}
-            >
-              {row.original.name}
-            </Link>
-            <div className="text-xs text-muted-foreground">
-              Updated {new Date(row.original.updatedAt).toLocaleString()}
+          <div className="flex items-center gap-3">
+            <img
+              src={row.original.imageUrl || "https://placehold.co/80x80"}
+              alt={row.original.name}
+              className="h-12 w-12 rounded-lg object-cover"
+            />
+            <div>
+              <Link
+                className="font-medium text-primary hover:underline"
+                to={`/recipes/${row.original.id}`}
+              >
+                {row.original.name}
+              </Link>
+              <div className="text-xs text-muted-foreground">
+                Updated {new Date(row.original.updatedAt).toLocaleString()}
+              </div>
             </div>
           </div>
         ),
@@ -231,6 +242,33 @@ export function RecipeManagementPage() {
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="e.g. Chicken Stew"
             />
+          </FormField>
+          <FormField label="Image URL" fullWidth>
+            <div className="space-y-3">
+              <Input
+                value={form.imageUrl}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    imageUrl: e.target.value,
+                  }))
+                }
+                placeholder="https://images.unsplash.com/..."
+              />
+
+              {form.imageUrl && (
+                <div className="overflow-hidden rounded-xl border">
+                  <img
+                    src={form.imageUrl}
+                    alt="Recipe preview"
+                    className="h-40 w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           </FormField>
           <FormField label="Yield quantity">
             <Input

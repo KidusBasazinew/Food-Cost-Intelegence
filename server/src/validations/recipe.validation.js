@@ -11,6 +11,20 @@ export const listRecipesSchema = {
   query: z.object({
     search: z.string().trim().min(1).max(120).optional(),
     status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+    category: z
+      .enum([
+        "APPETIZER",
+        "MAIN",
+        "SIDE",
+        "SALAD",
+        "SOUP",
+        "BREAKFAST",
+        "SNACK",
+        "DESSERT",
+        "DRINK",
+        "OTHER",
+      ])
+      .optional(),
   }),
 };
 
@@ -18,6 +32,21 @@ export const createRecipeSchema = {
   body: z.object({
     name: z.string().trim().min(1).max(160),
     description: z.string().trim().max(500).optional().nullable(),
+    imageUrl: z.string().trim().max(2048).optional().nullable(),
+    category: z
+      .enum([
+        "APPETIZER",
+        "MAIN",
+        "SIDE",
+        "SALAD",
+        "SOUP",
+        "BREAKFAST",
+        "SNACK",
+        "DESSERT",
+        "DRINK",
+        "OTHER",
+      ])
+      .optional(),
     menuItemId: z.string().trim().max(64).optional().nullable(),
     yieldQuantity: decimalLike.optional().default(1),
     yieldUnitId: uuid,
@@ -33,6 +62,21 @@ export const updateRecipeSchema = {
     .object({
       name: z.string().trim().min(1).max(160).optional(),
       description: z.string().trim().max(500).optional().nullable(),
+      imageUrl: z.string().trim().max(2048).optional().nullable(),
+      category: z
+        .enum([
+          "APPETIZER",
+          "MAIN",
+          "SIDE",
+          "SALAD",
+          "SOUP",
+          "BREAKFAST",
+          "SNACK",
+          "DESSERT",
+          "DRINK",
+          "OTHER",
+        ])
+        .optional(),
       menuItemId: z.string().trim().max(64).optional().nullable(),
       yieldQuantity: decimalLike.optional(),
       yieldUnitId: uuid.optional(),

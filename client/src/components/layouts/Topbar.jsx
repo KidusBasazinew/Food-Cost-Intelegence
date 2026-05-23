@@ -114,7 +114,9 @@ export function Topbar() {
         </button>
 
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-bold tracking-tight">{pageTitle}</h2>
+          <h2 className="truncate text-lg font-bold tracking-tight">
+            {pageTitle}
+          </h2>
           <p className="hidden text-xs text-muted-foreground sm:block">
             Hospitality food operations intelligence
           </p>
@@ -132,14 +134,14 @@ export function Topbar() {
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 lg:inline-flex">
+        <span className="hidden items-center gap-1.5 rounded-full border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 lg:inline-flex">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-soft" />
           Live
         </span>
 
         <button
           type="button"
-          className="relative hidden rounded-xl border bg-card p-2.5 shadow-sm hover:bg-accent sm:inline-flex"
+          className="relative hidden rounded-xl bg-card p-2.5 hover:bg-accent sm:inline-flex"
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" />
@@ -151,7 +153,7 @@ export function Topbar() {
         <button
           type="button"
           className={cn(
-            "inline-flex items-center justify-center rounded-xl border bg-card p-2.5 shadow-sm",
+            "inline-flex items-center justify-center rounded-xl bg-card p-2.5 ",
             "hover:bg-accent",
           )}
           onClick={() => setTheme(isDark ? "light" : "dark")}
@@ -166,7 +168,7 @@ export function Topbar() {
             <button
               type="button"
               className={cn(
-                "inline-flex items-center gap-2.5 rounded-xl border bg-card py-1.5 pl-1.5 pr-3 shadow-sm",
+                "inline-flex items-center gap-2.5 rounded-xl bg-card py-1.5 pl-1.5 pr-3",
                 "hover:bg-accent",
               )}
               aria-label="User menu"

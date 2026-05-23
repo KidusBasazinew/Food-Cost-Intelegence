@@ -4,12 +4,11 @@ import { inventoryApi } from "@/features/inventory/api/inventoryApi";
 
 export function useInventoryItemsQuery(params = {}, options = {}) {
   return useQuery({
-    queryKey: ["inventory", "items", params],
+    queryKey: ["inventory", "items", params.category, params.search],
     queryFn: () => inventoryApi.listItems(params),
     ...options,
   });
 }
-
 export function useInventoryItemQuery(id, options = {}) {
   return useQuery({
     queryKey: ["inventory", "item", id],

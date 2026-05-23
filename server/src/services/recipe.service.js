@@ -23,6 +23,7 @@ export async function listRecipes({ hotelId, branchId, query }) {
   const where = {
     ...withBranchScope({ hotelId, branchId }),
     ...(query?.status ? { status: query.status } : {}),
+    ...(query?.category ? { category: query.category } : {}),
     ...(query?.search
       ? {
           name: { contains: query.search, mode: "insensitive" },
@@ -66,6 +67,8 @@ export async function createRecipe({ hotelId, branchId, input }) {
       menuItemId: input.menuItemId ?? null,
       name: input.name,
       description: input.description ?? null,
+      imageUrl: input.imageUrl ?? null,
+      category: input.category ?? "OTHER",
       yieldQuantity: toDecimal(yieldQty),
       yieldUnitId: yieldUnit.id,
       preparationInstructions: input.preparationInstructions ?? null,
@@ -105,6 +108,8 @@ export async function updateRecipe({ hotelId, branchId, id, input }) {
       name: input.name ?? undefined,
       description:
         input.description === undefined ? undefined : input.description,
+      imageUrl: input.imageUrl === undefined ? undefined : input.imageUrl,
+      category: input.category ?? undefined,
       menuItemId: input.menuItemId === undefined ? undefined : input.menuItemId,
       yieldQuantity:
         input.yieldQuantity === undefined

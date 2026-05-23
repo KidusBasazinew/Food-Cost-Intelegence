@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/erp";
 import { useInventoryItemsQuery } from "@/features/inventory/hooks/useInventoryItems";
 import { usePurchasesQuery } from "@/features/inventory/hooks/usePurchases";
+import { useMemo } from "react";
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -63,9 +64,15 @@ function addDays(date, days) {
 
 export function InventoryDashboardPage() {
   const itemsQuery = useInventoryItemsQuery();
-  const from = startOfDay(addDays(new Date(), -29)).toISOString();
-  const to = new Date().toISOString();
-  const purchasesQuery = usePurchasesQuery({ from, to });
+
+  const purchaseParams = useMemo(() => {
+    return {
+      from: startOfDay(addDays(new Date(), -29)).toISOString(),
+      to: new Date().toISOString(),
+    };
+  }, []);
+
+  const purchasesQuery = usePurchasesQuery(purchaseParams);
 
   const items = itemsQuery.data || [];
   const purchases = purchasesQuery.data || [];
@@ -194,31 +201,57 @@ export function InventoryDashboardPage() {
 
       {lowStockCount > 0 ? (
         <InsightPanel variant="warning" title="Stock attention needed">
-          {lowStockCount} item{lowStockCount !== 1 ? "s" : ""} need replenishment.{" "}
-          <Link to="/inventory/low-stock" className="font-medium text-primary hover:underline">
+          {lowStockCount} item{lowStockCount !== 1 ? "s" : ""} need
+          replenishment.{" "}
+          <Link
+            to="/inventory/low-stock"
+            className="font-medium text-primary hover:underline"
+          >
             View low stock alerts →
           </Link>
         </InsightPanel>
       ) : null}
 
       <ContentGrid>
-        <AnalyticsCard title="Spend trend" description="Last 30 days" accent="cyan" loading={isLoading}>
-          <ChartWrapper empty={dailySpend.every((d) => d.spend === 0)} height={288}>
+        <AnalyticsCard
+          title="Spend trend"
+          description="Last 30 days"
+          accent="cyan"
+          loading={isLoading}
+        >
+          <ChartWrapper
+            empty={dailySpend.every((d) => d.spend === 0)}
+            height={288}
+          >
             <AreaChart data={dailySpend} margin={{ left: 8, right: 8 }}>
               <defs>
                 <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_COLORS.cyan} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={CHART_COLORS.cyan} stopOpacity={0} />
+                  <stop
+                    offset="0%"
+                    stopColor={CHART_COLORS.cyan}
+                    stopOpacity={0.35}
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={CHART_COLORS.cyan}
+                    stopOpacity={0}
+                  />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                className="stroke-border/50"
+              />
               <XAxis dataKey="day" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip
                 content={
                   <ChartTooltip
                     formatter={(v) => [
-                      Number(v).toLocaleString(undefined, { style: "currency", currency: "USD" }),
+                      Number(v).toLocaleString(undefined, {
+                        style: "currency",
+                        currency: "USD",
+                      }),
                       "Spend",
                     ]}
                   />
@@ -243,14 +276,25 @@ export function InventoryDashboardPage() {
         >
           <ChartWrapper empty={categoryData.length === 0} height={288}>
             <BarChart data={categoryData} margin={{ left: 8, right: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-              <XAxis dataKey="category" tick={{ fontSize: 10 }} interval={0} height={48} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                className="stroke-border/50"
+              />
+              <XAxis
+                dataKey="category"
+                tick={{ fontSize: 10 }}
+                interval={0}
+                height={48}
+              />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip
                 content={
                   <ChartTooltip
                     formatter={(v) => [
-                      Number(v).toLocaleString(undefined, { style: "currency", currency: "USD" }),
+                      Number(v).toLocaleString(undefined, {
+                        style: "currency",
+                        currency: "USD",
+                      }),
                       "Value",
                     ]}
                   />
@@ -258,7 +302,10 @@ export function InventoryDashboardPage() {
               />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                 {categoryData.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS.palette[i % CHART_COLORS.palette.length]} />
+                  <Cell
+                    key={i}
+                    fill={CHART_COLORS.palette[i % CHART_COLORS.palette.length]}
+                  />
                 ))}
               </Bar>
             </BarChart>
@@ -272,7 +319,9 @@ export function InventoryDashboardPage() {
         accent="emerald"
       >
         {mostPurchasedItems.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No purchase lines yet.</p>
+          <p className="text-sm text-muted-foreground">
+            No purchase lines yet.
+          </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {mostPurchasedItems.map((row, i) => (
@@ -294,7 +343,8 @@ export function InventoryDashboardPage() {
                   className="mt-2 h-1 rounded-full"
                   style={{
                     width: `${Math.max(20, 100 - i * 10)}%`,
-                    background: CHART_COLORS.palette[i % CHART_COLORS.palette.length],
+                    background:
+                      CHART_COLORS.palette[i % CHART_COLORS.palette.length],
                   }}
                 />
               </div>

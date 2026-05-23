@@ -4,7 +4,7 @@ import { purchasesApi } from "@/features/inventory/api/purchasesApi";
 
 export function usePurchasesQuery(params = {}, options = {}) {
   return useQuery({
-    queryKey: ["purchases", params],
+    queryKey: ["purchases", params.from, params.to, params.status],
     queryFn: () => purchasesApi.list(params),
     ...options,
   });

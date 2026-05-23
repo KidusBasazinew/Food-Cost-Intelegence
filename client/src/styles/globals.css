@@ -67,7 +67,12 @@
 
     --radius: 0.875rem;
 
-    /* ... rest of your ERP palette variables ... */
+    --erp-purple: 262 83% 58%;
+    --erp-blue: 221 83% 53%;
+    --erp-emerald: 160 84% 39%;
+    --erp-amber: 38 92% 50%;
+    --erp-cyan: 190 95% 39%;
+    --erp-rose: 346 77% 49%;
   }
 
   .dark {
@@ -118,6 +123,13 @@
       0 1px 3px 0 rgb(0 0 0 / 0.2), 0 4px 16px -2px rgb(0 0 0 / 0.25);
     --shadow-elevated:
       0 4px 6px -1px rgb(0 0 0 / 0.3), 0 12px 32px -4px rgb(0 0 0 / 0.4);
+
+    --erp-purple: 262 83% 58%;
+    --erp-blue: 221 83% 53%;
+    --erp-emerald: 160 84% 39%;
+    --erp-amber: 38 92% 50%;
+    --erp-cyan: 190 95% 39%;
+    --erp-rose: 346 77% 49%;
   }
 
   * {

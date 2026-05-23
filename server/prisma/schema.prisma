@@ -188,6 +188,19 @@ enum RecipeStatus {
   INACTIVE
 }
 
+enum RecipeCategory {
+  APPETIZER
+  MAIN
+  SIDE
+  SALAD
+  SOUP
+  BREAKFAST
+  SNACK
+  DESSERT
+  DRINK
+  OTHER
+}
+
 enum ConsumptionSourceType {
   ORDER
   MANUAL_WASTE
@@ -252,6 +265,8 @@ model Recipe {
   menuItemId            String?
   name                  String
   description           String?
+  imageUrl              String?
+  category              RecipeCategory @default(OTHER)
   yieldQuantity         Decimal      @default(1)
   yieldUnitId           String
   preparationInstructions String?
@@ -274,6 +289,7 @@ model Recipe {
 
   @@index([hotelId])
   @@index([branchId])
+  @@index([category])
   @@index([status])
   @@index([createdAt])
 }

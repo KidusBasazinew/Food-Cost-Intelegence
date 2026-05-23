@@ -24,6 +24,7 @@ import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { ExecutiveFoodOpsDashboardPage } from "@/features/analytics/pages/ExecutiveFoodOpsDashboardPage";
 import { ReportsPage } from "@/features/analytics/pages/ReportsPage";
+import ElitePOS from "@/pages/restaurant/components/ElitePOS";
 
 export function AppRouter() {
   return (
@@ -32,6 +33,8 @@ export function AppRouter() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
         <Route path="/login" element={<LoginPage />} />
+
+        <Route path="/ops" element={<ElitePOS />} />
 
         <Route element={<RequireAuth />}>
           <Route element={<DashboardLayout />}>
