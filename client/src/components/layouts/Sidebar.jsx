@@ -64,14 +64,21 @@ export function Sidebar() {
 
   return (
     <div className="flex h-dvh flex-col bg-sidebar">
-      <div className={cn("border-b border-sidebar-border", collapsed ? "p-4" : "p-5")}>
+      <div
+        className={cn(
+          "border-b border-sidebar-border",
+          collapsed ? "p-4" : "p-5",
+        )}
+      >
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md">
-            <Infinity className="h-5 w-5" />
+            <img src="./logo-01.png" alt="Logo" className="h-5 w-5" />
           </div>
           {!collapsed ? (
             <div>
-              <div className="text-sm font-bold tracking-tight">Food Ops ERP</div>
+              <div className="text-sm font-bold tracking-tight">
+                K-LABS: Food Ops ERP
+              </div>
               <div className="text-[11px] text-muted-foreground">
                 Kitchen Intelligence
               </div>
@@ -143,7 +150,12 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className={cn("border-t border-sidebar-border", collapsed ? "p-3" : "p-4")}>
+      <div
+        className={cn(
+          "border-t border-sidebar-border",
+          collapsed ? "p-3" : "p-4",
+        )}
+      >
         {!collapsed ? (
           <motion.div
             initial={{ opacity: 0 }}
@@ -155,7 +167,9 @@ export function Sidebar() {
               className="w-full rounded-xl border bg-card px-3 py-2.5 text-left text-xs transition-colors hover:bg-muted/50"
             >
               <span className="font-medium">Main Kitchen</span>
-              <span className="mt-0.5 block text-muted-foreground">Workspace</span>
+              <span className="mt-0.5 block text-muted-foreground">
+                Workspace
+              </span>
             </button>
             <p className="text-center text-[10px] text-muted-foreground">
               Food Ops ERP © 2026

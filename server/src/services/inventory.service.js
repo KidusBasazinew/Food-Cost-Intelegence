@@ -8,6 +8,7 @@ import {
   createInventoryTransaction,
   validateInventoryAvailability,
 } from "../lib/inventoryEngine.js";
+import { notifyInventoryStockChange } from "./notificationTrigger.service.js";
 
 const Decimal = Prisma.Decimal;
 
@@ -154,6 +155,15 @@ export async function updateInventoryItem({ hotelId, branchId, id, input }) {
     data,
     include: { baseUnit: true },
   });
+
+  // If thresholds were updated, re-evaluate low/out-of-stock.
+  if (input.minimumStockLevel !== undefined) {
+    await notifyInventoryStockChange({
+      hotelId,
+      branchId,
+      inventoryItem: updated,
+    });
+  }
 
   return updated;
 }
@@ -303,6 +313,13 @@ export async function createManualInventoryTransaction({
         note: input.note ?? null,
         createdByUserId: userId ?? null,
       },
+    });
+
+    await notifyInventoryStockChange({
+      tx,
+      hotelId,
+      branchId,
+      inventoryItem: updatedItem,
     });
 
     return { transaction: txn, inventoryItem: updatedItem };

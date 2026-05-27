@@ -6,6 +6,7 @@ import {
   calculateProfitMarginPercent,
 } from "./profitCalculation.service.js";
 import { withRecipeYieldMetrics } from "./recipeYieldMetrics.service.js";
+import { notifyRecipeFoodCostAlert } from "./notificationTrigger.service.js";
 
 function withBranchScope({ hotelId, branchId }) {
   if (branchId) {
@@ -27,7 +28,12 @@ export function calculateRecipeCost({ ingredients }) {
   return total;
 }
 
-export async function recalculateRecipeCosts({ hotelId, branchId, recipeId }) {
+export async function recalculateRecipeCosts({
+  hotelId,
+  branchId,
+  recipeId,
+  userId,
+}) {
   return prisma.$transaction(async (tx) => {
     const recipe = await tx.recipe.findFirst({
       where: { id: recipeId, ...withBranchScope({ hotelId, branchId }) },
@@ -106,6 +112,18 @@ export async function recalculateRecipeCosts({ hotelId, branchId, recipeId }) {
       },
     });
 
-    return withRecipeYieldMetrics(updatedRecipe);
+    const decorated = withRecipeYieldMetrics(updatedRecipe);
+
+    // Notify on profitability/food cost threshold breaches.
+    await notifyRecipeFoodCostAlert({
+      tx,
+      hotelId,
+      branchId,
+      recipe: { id: decorated.id, name: decorated.name },
+      metrics: decorated,
+      userId: userId ?? null,
+    });
+
+    return decorated;
   });
 }

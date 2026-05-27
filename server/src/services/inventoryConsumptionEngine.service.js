@@ -6,6 +6,7 @@ import {
   createInventoryTransaction,
   validateInventoryAvailability,
 } from "../lib/inventoryEngine.js";
+import { notifyInventoryStockChange } from "./notificationTrigger.service.js";
 import {
   assertRecipeIsActive,
   assertServingsPositive,
@@ -82,10 +83,17 @@ export async function consumeRecipeIngredients({
       });
 
       // Decrease inventory stock by requiredBase.
-      await adjustInventoryStock({
+      const updatedItem = await adjustInventoryStock({
         tx,
         inventoryItemId: item.id,
         deltaQtyInBaseUnit: requiredBase.mul(new Decimal(-1)),
+      });
+
+      await notifyInventoryStockChange({
+        tx,
+        hotelId,
+        branchId,
+        inventoryItem: { ...updatedItem, baseUnit: item.baseUnit },
       });
 
       const txn = await createInventoryTransaction({

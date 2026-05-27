@@ -7,6 +7,10 @@ import {
   createInventoryTransaction,
   validateInventoryAvailability,
 } from "../lib/inventoryEngine.js";
+import {
+  notifyHighValueWaste,
+  notifyInventoryStockChange,
+} from "./notificationTrigger.service.js";
 
 function withBranchScope({ hotelId, branchId }) {
   if (branchId) {
@@ -71,7 +75,7 @@ export async function logWaste({ hotelId, branchId, userId, input }) {
       },
     });
 
-    await adjustInventoryStock({
+    const updatedItem = await adjustInventoryStock({
       tx,
       inventoryItemId: item.id,
       deltaQtyInBaseUnit: qtyInBase.mul(new Decimal(-1)),
@@ -94,6 +98,23 @@ export async function logWaste({ hotelId, branchId, userId, input }) {
         note: input.notes ?? "Waste logged",
         createdByUserId: userId ?? null,
       },
+    });
+
+    // Notifications
+    await notifyInventoryStockChange({
+      tx,
+      hotelId,
+      branchId,
+      inventoryItem: { ...updatedItem, baseUnit: item.baseUnit },
+    });
+
+    await notifyHighValueWaste({
+      tx,
+      hotelId,
+      branchId,
+      inventoryItem: { id: item.id, name: item.name },
+      wasteRow,
+      totalCostCents,
     });
 
     return { waste: wasteRow, transaction: txn };

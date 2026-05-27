@@ -1,5 +1,4 @@
 import {
-  Bell,
   ChevronDown,
   LogOut,
   Menu,
@@ -28,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/useSidebarStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { authApi } from "@/features/auth/api/authApi";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 
 const PAGE_TITLES = {
   "/dashboard": "Dashboard",
@@ -139,16 +139,7 @@ export function Topbar() {
           Live
         </span>
 
-        <button
-          type="button"
-          className="relative hidden rounded-xl bg-card p-2.5 hover:bg-accent sm:inline-flex"
-          aria-label="Notifications"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-            3
-          </span>
-        </button>
+        <NotificationBell />
 
         <button
           type="button"

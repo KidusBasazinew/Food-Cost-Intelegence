@@ -54,9 +54,11 @@ export function LoginPage() {
         >
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg">
-              <Infinity className="h-8 w-8" />
+              <img src="./logo-01.png" alt="Logo" className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Food Ops ERP</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              K-LABS: Food Ops ERP
+            </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Hospitality food operations intelligence
             </p>

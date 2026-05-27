@@ -11,6 +11,7 @@ import { recipeIngredientsRouter } from "./recipeIngredients.routes.js";
 import { inventoryConsumptionRouter } from "./inventoryConsumption.routes.js";
 import { foodCostRouter } from "./foodCost.routes.js";
 import { wasteRouter } from "./waste.routes.js";
+import { notificationsRouter } from "./notifications.routes.js";
 import { analyticsExecutiveRouter } from "./analyticsExecutive.routes.js";
 import { analyticsFoodCostRouter } from "./analyticsFoodCost.routes.js";
 import { analyticsMenuEngineeringRouter } from "./analyticsMenuEngineering.routes.js";
@@ -36,6 +37,9 @@ apiRouter.use("/recipe-ingredients", recipeIngredientsRouter);
 apiRouter.use("/inventory-consumption", inventoryConsumptionRouter);
 apiRouter.use("/food-cost", foodCostRouter);
 apiRouter.use("/waste", wasteRouter);
+
+// Stage 6 — Enterprise Notifications
+apiRouter.use("/notifications", notificationsRouter);
 
 // Stage 5 — Executive Food Operations BI
 apiRouter.use("/analytics/executive", analyticsExecutiveRouter);

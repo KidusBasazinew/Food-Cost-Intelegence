@@ -57,6 +57,7 @@ model Hotel {
   recipes               Recipe[]
   inventoryConsumptions InventoryConsumption[]
   salesOrders           SalesOrder[]
+  notifications         Notification[]
 
   @@index([status])
   @@index([createdAt])
@@ -84,6 +85,7 @@ model Branch {
   salesOrders           SalesOrder[]
   menuAnalyticsSnapshots MenuAnalyticsSnapshot[]
   inventoryForecastSnapshots InventoryForecastSnapshot[]
+  notifications         Notification[]
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -110,11 +112,61 @@ model User {
   refreshTokens RefreshToken[]
   inventoryTransactionsCreated InventoryTransaction[] @relation("InventoryTransactionCreatedBy")
   purchasesCreated              Purchase[]            @relation("PurchaseCreatedBy")
+  notifications                 Notification[]
 
   @@index([hotelId])
   @@index([branchId])
   @@index([role])
   @@index([status])
+  @@index([createdAt])
+}
+
+// =====================================================
+// Stage 6 — Enterprise In-App Notifications
+// =====================================================
+
+enum NotificationType {
+  LOW_STOCK
+  OUT_OF_STOCK
+  PURCHASE_CREATED
+  PURCHASE_STATUS_CHANGED
+  WASTE_ALERT
+  PROFITABILITY_ALERT
+  SYSTEM_ALERT
+}
+
+enum NotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  HIGH
+  CRITICAL
+}
+
+model Notification {
+  id        String               @id @default(uuid())
+  hotelId   String
+  branchId  String?
+  userId    String?
+  type      NotificationType
+  severity  NotificationSeverity @default(INFO)
+  title     String
+  message   String?
+  actionUrl String?
+  metadata  Json?
+  isRead    Boolean              @default(false)
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId, userId, isRead, createdAt])
+  @@index([hotelId, branchId, createdAt])
+  @@index([type])
+  @@index([severity])
   @@index([createdAt])
 }
 

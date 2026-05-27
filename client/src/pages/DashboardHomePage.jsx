@@ -20,6 +20,7 @@ import {
   PageHeader,
   PageShell,
 } from "@/components/ui/erp";
+import { DashboardNotificationsWidget } from "@/features/notifications/components/DashboardNotificationsWidget";
 
 const quickLinks = [
   {
@@ -109,7 +110,7 @@ export function DashboardHomePage() {
         />
       </KpiGrid>
 
-      <ContentGrid>
+      <ContentGrid cols={3}>
         <AnalyticsCard
           title="Quick navigation"
           description="Jump into core operational modules"
@@ -147,6 +148,8 @@ export function DashboardHomePage() {
             ))}
           </div>
         </AnalyticsCard>
+
+        <DashboardNotificationsWidget />
 
         <InsightPanel variant="analytics" title="Operational intelligence">
           Your platform is fully connected — inventory flows, recipe costing,

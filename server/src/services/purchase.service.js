@@ -7,6 +7,10 @@ import {
   convertToBaseUnit,
   createInventoryTransaction,
 } from "../lib/inventoryEngine.js";
+import {
+  notifyInventoryStockChange,
+  notifyPurchaseEvent,
+} from "./notificationTrigger.service.js";
 
 const Decimal = Prisma.Decimal;
 
@@ -195,6 +199,14 @@ export async function createPurchase({ hotelId, branchId, userId, input }) {
       },
     });
 
+    await notifyPurchaseEvent({
+      tx,
+      hotelId,
+      branchId,
+      purchase,
+      event: "CREATED",
+    });
+
     return purchase;
   });
 }
@@ -217,6 +229,8 @@ export async function updatePurchase({ hotelId, branchId, userId, id, input }) {
 
     // Receiving is a state transition that also writes inventory + transactions.
     const nextStatus = input.status;
+
+    const previousStatus = purchase.status;
 
     if (nextStatus === "RECEIVED") {
       if (purchase.status === "RECEIVED") {
@@ -253,12 +267,20 @@ export async function updatePurchase({ hotelId, branchId, userId, id, input }) {
           receivedUnitCostPerBaseUnitCents: unitCostPerBaseUnitCents,
         });
 
-        await tx.inventoryItem.update({
+        const updatedItem = await tx.inventoryItem.update({
           where: { id: item.id },
           data: {
             quantityInStock: { increment: qtyInBase },
             averageCostPerBaseUnitCents: nextAvg,
           },
+          include: { baseUnit: true },
+        });
+
+        await notifyInventoryStockChange({
+          tx,
+          hotelId,
+          branchId,
+          inventoryItem: updatedItem,
         });
 
         await createInventoryTransaction({
@@ -285,7 +307,7 @@ export async function updatePurchase({ hotelId, branchId, userId, id, input }) {
         ? new Date(input.receivedAt)
         : new Date();
 
-      return tx.purchase.update({
+      const updatedPurchase = await tx.purchase.update({
         where: { id: purchase.id },
         data: {
           status: "RECEIVED",
@@ -304,6 +326,17 @@ export async function updatePurchase({ hotelId, branchId, userId, id, input }) {
           },
         },
       });
+
+      await notifyPurchaseEvent({
+        tx,
+        hotelId,
+        branchId,
+        purchase: updatedPurchase,
+        event: "RECEIVED",
+        previousStatus,
+      });
+
+      return updatedPurchase;
     }
 
     if (nextStatus === "CANCELLED" && purchase.status === "RECEIVED") {
@@ -321,7 +354,7 @@ export async function updatePurchase({ hotelId, branchId, userId, id, input }) {
     }
 
     // Update purchase header fields (no item edits in this stage).
-    return tx.purchase.update({
+    const updatedPurchase = await tx.purchase.update({
       where: { id: purchase.id },
       data: {
         status: nextStatus ?? undefined,
@@ -364,5 +397,18 @@ export async function updatePurchase({ hotelId, branchId, userId, id, input }) {
         },
       },
     });
+
+    if (nextStatus && nextStatus !== previousStatus) {
+      await notifyPurchaseEvent({
+        tx,
+        hotelId,
+        branchId,
+        purchase: updatedPurchase,
+        event: "STATUS_CHANGED",
+        previousStatus,
+      });
+    }
+
+    return updatedPurchase;
   });
 }
