@@ -5,11 +5,12 @@ export function toNumber(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function formatMoney(cents, currency = "USD") {
+export function formatMoney(cents, currency = "ETB") {
   const v = toNumber(cents) / 100;
   return v.toLocaleString(undefined, {
     style: "currency",
     currency,
+    currencyDisplay: "code",
     maximumFractionDigits: 2,
   });
 }

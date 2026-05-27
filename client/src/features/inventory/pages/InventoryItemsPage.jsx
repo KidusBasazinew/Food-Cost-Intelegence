@@ -126,10 +126,14 @@ export function InventoryItemsPage() {
         id: "avgCost",
         header: "Avg Cost / Base",
         cell: ({ row }) =>
-          (toNumber(row.original.averageCostPerBaseUnitCents) / 100).toLocaleString(
-            undefined,
-            { style: "currency", currency: "USD", maximumFractionDigits: 4 },
-          ),
+          (
+            toNumber(row.original.averageCostPerBaseUnitCents) / 100
+          ).toLocaleString(undefined, {
+            style: "currency",
+            currency: "ETB",
+            currencyDisplay: "code",
+            maximumFractionDigits: 4,
+          }),
       },
       {
         id: "min",
@@ -145,7 +149,10 @@ export function InventoryItemsPage() {
           const stock = toNumber(row.original.quantityInStock);
           const low = min > 0 && stock <= min;
           return (
-            <StatusBadge status={low ? "low_stock" : "active"} label={low ? "Low" : "OK"} />
+            <StatusBadge
+              status={low ? "low_stock" : "active"}
+              label={low ? "Low" : "OK"}
+            />
           );
         },
       },

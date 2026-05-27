@@ -111,7 +111,10 @@ export function InventoryItemDetailsPage() {
         accessorKey: "type",
         header: "Type",
         cell: ({ getValue }) => (
-          <StatusBadge status={TYPE_STATUS[getValue()] || "operational"} label={getValue()} />
+          <StatusBadge
+            status={TYPE_STATUS[getValue()] || "operational"}
+            label={getValue()}
+          />
         ),
       },
       {
@@ -142,10 +145,17 @@ export function InventoryItemDetailsPage() {
     <PageShell>
       <PageHeader
         title={item?.name || "Item Details"}
-        subtitle={item?.sku ? `SKU: ${item.sku}` : "Inventory item snapshot and transactions"}
+        subtitle={
+          item?.sku
+            ? `SKU: ${item.sku}`
+            : "Inventory item snapshot and transactions"
+        }
         badge={
           item ? (
-            <StatusBadge status={isLow ? "low_stock" : "active"} label={isLow ? "Low stock" : "In stock"} />
+            <StatusBadge
+              status={isLow ? "low_stock" : "active"}
+              label={isLow ? "Low stock" : "In stock"}
+            />
           ) : null
         }
         actions={
@@ -167,14 +177,18 @@ export function InventoryItemDetailsPage() {
       <KpiGrid cols={4}>
         <KpiCard
           label="In stock"
-          value={item ? `${stock.toLocaleString()} ${item.baseUnit?.symbol}` : "—"}
+          value={
+            item ? `${stock.toLocaleString()} ${item.baseUnit?.symbol}` : "—"
+          }
           icon={Package}
           accent={isLow ? "rose" : "blue"}
           loading={itemQuery.isLoading}
         />
         <KpiCard
           label="Minimum"
-          value={item ? `${min.toLocaleString()} ${item.baseUnit?.symbol}` : "—"}
+          value={
+            item ? `${min.toLocaleString()} ${item.baseUnit?.symbol}` : "—"
+          }
           accent="amber"
           loading={itemQuery.isLoading}
         />
@@ -182,9 +196,12 @@ export function InventoryItemDetailsPage() {
           label="Avg cost / base"
           value={
             item
-              ? (toNumber(item.averageCostPerBaseUnitCents) / 100).toLocaleString(undefined, {
+              ? (
+                  toNumber(item.averageCostPerBaseUnitCents) / 100
+                ).toLocaleString(undefined, {
                   style: "currency",
-                  currency: "USD",
+                  currency: "ETB",
+                  currencyDisplay: "code",
                   maximumFractionDigits: 4,
                 })
               : "—"
@@ -241,8 +258,12 @@ export function InventoryItemDetailsPage() {
           <FormField label="Quantity">
             <Input
               value={form.quantity}
-              onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
-              placeholder={form.type === "ADJUSTMENT" ? "e.g. 5 or -5" : "e.g. 5"}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, quantity: e.target.value }))
+              }
+              placeholder={
+                form.type === "ADJUSTMENT" ? "e.g. 5 or -5" : "e.g. 5"
+              }
             />
           </FormField>
           <FormField label="Unit">
@@ -265,7 +286,9 @@ export function InventoryItemDetailsPage() {
           <FormField label="Unit cost (cents)">
             <Input
               value={form.unitCostCents}
-              onChange={(e) => setForm((f) => ({ ...f, unitCostCents: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, unitCostCents: e.target.value }))
+              }
               placeholder="optional"
             />
           </FormField>

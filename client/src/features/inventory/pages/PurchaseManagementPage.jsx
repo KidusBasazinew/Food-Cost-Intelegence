@@ -43,7 +43,8 @@ function toNumber(value) {
 function formatMoneyFromCents(cents) {
   return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
-    currency: "USD",
+    currency: "ETB",
+    currencyDisplay: "code",
     maximumFractionDigits: 2,
   });
 }
@@ -157,14 +158,19 @@ export function PurchaseManagementPage() {
         id: "supplier",
         header: "Supplier",
         cell: ({ row }) => (
-          <span className="font-medium">{row.original.supplier?.name || "—"}</span>
+          <span className="font-medium">
+            {row.original.supplier?.name || "—"}
+          </span>
         ),
       },
       {
         accessorKey: "status",
         header: "Status",
         cell: ({ getValue }) => (
-          <StatusBadge status={STATUS_MAP[getValue()] || "pending"} label={getValue()} />
+          <StatusBadge
+            status={STATUS_MAP[getValue()] || "pending"}
+            label={getValue()}
+          />
         ),
       },
       {
@@ -300,19 +306,27 @@ export function PurchaseManagementPage() {
           <FormField label="Tax (cents)">
             <Input
               value={form.taxCents}
-              onChange={(e) => setForm((f) => ({ ...f, taxCents: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, taxCents: e.target.value }))
+              }
             />
           </FormField>
           <FormField label="Notes" fullWidth>
             <Input
               value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, notes: e.target.value }))
+              }
               placeholder="optional"
             />
           </FormField>
         </FormSection>
 
-        <AnalyticsCard title="Line items" accent="blue" contentClassName="space-y-3">
+        <AnalyticsCard
+          title="Line items"
+          accent="blue"
+          contentClassName="space-y-3"
+        >
           {form.items.map((line, idx) => {
             const selectedItem = itemById.get(line.inventoryItemId);
             const baseType = selectedItem?.baseUnit?.baseType;
@@ -369,7 +383,9 @@ export function PurchaseManagementPage() {
                   <FormField label="Qty">
                     <Input
                       value={line.quantity}
-                      onChange={(e) => setLine(idx, { quantity: e.target.value })}
+                      onChange={(e) =>
+                        setLine(idx, { quantity: e.target.value })
+                      }
                       placeholder="2"
                     />
                   </FormField>
@@ -399,7 +415,12 @@ export function PurchaseManagementPage() {
               </div>
             );
           })}
-          <Button type="button" variant="secondary" className="rounded-xl" onClick={addLine}>
+          <Button
+            type="button"
+            variant="secondary"
+            className="rounded-xl"
+            onClick={addLine}
+          >
             Add line
           </Button>
         </AnalyticsCard>

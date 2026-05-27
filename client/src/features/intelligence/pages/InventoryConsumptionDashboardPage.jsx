@@ -53,7 +53,8 @@ function toNumber(value) {
 function formatMoney(cents) {
   return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
-    currency: "USD",
+    currency: "ETB",
+    currencyDisplay: "code",
     maximumFractionDigits: 2,
   });
 }
@@ -124,7 +125,9 @@ export function InventoryConsumptionDashboardPage() {
         id: "recipe",
         header: "Recipe",
         cell: ({ row }) => (
-          <span className="font-medium">{row.original.recipe?.name ?? "—"}</span>
+          <span className="font-medium">
+            {row.original.recipe?.name ?? "—"}
+          </span>
         ),
       },
       {
@@ -249,23 +252,48 @@ export function InventoryConsumptionDashboardPage() {
       </KpiGrid>
 
       <ContentGrid>
-        <AnalyticsCard title="Daily spend trend" accent="cyan" loading={reportQuery.isLoading}>
+        <AnalyticsCard
+          title="Daily spend trend"
+          accent="cyan"
+          loading={reportQuery.isLoading}
+        >
           <ChartWrapper empty={chartData.length === 0} height={300}>
             <AreaChart data={chartData} margin={{ left: 8, right: 8 }}>
               <defs>
-                <linearGradient id="consumptionGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={CHART_COLORS.cyan} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={CHART_COLORS.cyan} stopOpacity={0} />
+                <linearGradient
+                  id="consumptionGrad"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="0%"
+                    stopColor={CHART_COLORS.cyan}
+                    stopOpacity={0.35}
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={CHART_COLORS.cyan}
+                    stopOpacity={0}
+                  />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                className="stroke-border/50"
+              />
               <XAxis dataKey="day" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip
                 content={
                   <ChartTooltip
                     formatter={(v) => [
-                      Number(v).toLocaleString(undefined, { style: "currency", currency: "USD" }),
+                      Number(v).toLocaleString(undefined, {
+                        style: "currency",
+                        currency: "ETB",
+                        currencyDisplay: "code",
+                      }),
                       "Cost",
                     ]}
                   />
@@ -305,7 +333,11 @@ export function InventoryConsumptionDashboardPage() {
         />
       </AnalyticsCard>
 
-      <AnalyticsCard title="Usage velocity (30d)" description="Depletion forecast" accent="amber">
+      <AnalyticsCard
+        title="Usage velocity (30d)"
+        description="Depletion forecast"
+        accent="amber"
+      >
         <DataTable
           columns={velocityColumns}
           data={(velocityQuery.data?.items || []).slice(0, 20)}
@@ -347,7 +379,9 @@ export function InventoryConsumptionDashboardPage() {
           <FormField label="Servings">
             <Input
               value={order.servings}
-              onChange={(e) => setOrder((o) => ({ ...o, servings: e.target.value }))}
+              onChange={(e) =>
+                setOrder((o) => ({ ...o, servings: e.target.value }))
+              }
             />
           </FormField>
           <FormField label="Source type">
@@ -368,7 +402,9 @@ export function InventoryConsumptionDashboardPage() {
           <FormField label="Order ref (optional)" fullWidth>
             <Input
               value={order.sourceId}
-              onChange={(e) => setOrder((o) => ({ ...o, sourceId: e.target.value }))}
+              onChange={(e) =>
+                setOrder((o) => ({ ...o, sourceId: e.target.value }))
+              }
               placeholder="e.g. Table 3 - Ticket 0182"
             />
           </FormField>

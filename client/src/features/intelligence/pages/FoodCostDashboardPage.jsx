@@ -42,7 +42,8 @@ function toNumber(value) {
 function formatMoney(cents) {
   return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
-    currency: "USD",
+    currency: "ETB",
+    currencyDisplay: "code",
     maximumFractionDigits: 2,
   });
 }

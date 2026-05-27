@@ -481,7 +481,7 @@ export default function ElitePOS() {
                     </p>
                     <div className="mt-auto flex items-center justify-between">
                       <span className="font-bold text-primary text-base">
-                        ${meal.price.toFixed(2)}
+                        ETB {meal.price.toFixed(2)}
                       </span>
                       <div className="bg-primary-container/20 p-2 rounded-xl group-hover:bg-primary transition-colors flex items-center justify-center">
                         <PlusCircle className="w-6 h-6 text-primary group-hover:text-white transition-colors" />
@@ -540,7 +540,7 @@ export default function ElitePOS() {
                     </div>
                   </div>
                   <span className="font-bold text-on-surface">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    ETB {(item.price * item.quantity).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between pt-2">
@@ -593,15 +593,15 @@ export default function ElitePOS() {
             <div className="space-y-3">
               <div className="flex justify-between text-on-surface-variant font-label-lg text-sm">
                 <span>Subtotal</span>
-                <span>${totals.subtotal}</span>
+                <span>ETB {totals.subtotal}</span>
               </div>
               <div className="flex justify-between text-on-surface-variant font-label-lg text-sm">
                 <span>Tax (9%)</span>
-                <span>${totals.tax}</span>
+                <span>ETB {totals.tax}</span>
               </div>
               <div className="flex justify-between text-on-surface-variant font-label-lg text-sm">
                 <span>Service Charge</span>
-                <span>${totals.serviceCharge}</span>
+                <span>ETB {totals.serviceCharge}</span>
               </div>
               <div className="h-px bg-outline-variant/30 my-2"></div>
               <div className="flex justify-between items-center">
@@ -609,7 +609,7 @@ export default function ElitePOS() {
                   Total
                 </span>
                 <span className="font-headline-md text-xl font-bold text-primary">
-                  ${totals.total}
+                  ETB {totals.total}
                 </span>
               </div>
             </div>

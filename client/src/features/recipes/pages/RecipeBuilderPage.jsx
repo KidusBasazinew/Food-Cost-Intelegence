@@ -43,7 +43,8 @@ function formatMoney(cents) {
   const v = toNumber(cents) / 100;
   return v.toLocaleString(undefined, {
     style: "currency",
-    currency: "USD",
+    currency: "ETB",
+    currencyDisplay: "code",
     maximumFractionDigits: 2,
   });
 }

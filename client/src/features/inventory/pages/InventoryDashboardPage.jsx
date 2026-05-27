@@ -45,7 +45,8 @@ function toNumber(value) {
 function formatMoneyFromCents(cents) {
   return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
-    currency: "USD",
+    currency: "ETB",
+    currencyDisplay: "code",
     maximumFractionDigits: 2,
   });
 }
@@ -250,7 +251,8 @@ export function InventoryDashboardPage() {
                     formatter={(v) => [
                       Number(v).toLocaleString(undefined, {
                         style: "currency",
-                        currency: "USD",
+                        currency: "ETB",
+                        currencyDisplay: "code",
                       }),
                       "Spend",
                     ]}
@@ -293,7 +295,8 @@ export function InventoryDashboardPage() {
                     formatter={(v) => [
                       Number(v).toLocaleString(undefined, {
                         style: "currency",
-                        currency: "USD",
+                        currency: "ETB",
+                        currencyDisplay: "code",
                       }),
                       "Value",
                     ]}
@@ -336,7 +339,8 @@ export function InventoryDashboardPage() {
                 <p className="mt-2 text-lg font-bold">
                   {row.total.toLocaleString(undefined, {
                     style: "currency",
-                    currency: "USD",
+                    currency: "ETB",
+                    currencyDisplay: "code",
                   })}
                 </p>
                 <div

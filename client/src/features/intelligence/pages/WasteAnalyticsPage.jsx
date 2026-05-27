@@ -38,7 +38,8 @@ function toNumber(value) {
 function formatMoney(cents) {
   return (toNumber(cents) / 100).toLocaleString(undefined, {
     style: "currency",
-    currency: "USD",
+    currency: "ETB",
+    currencyDisplay: "code",
     maximumFractionDigits: 2,
   });
 }
@@ -157,7 +158,11 @@ export function WasteAnalyticsPage() {
         hint={`${(report?.items || []).length} items tracked`}
       />
 
-      <AnalyticsCard title="Waste report" description="By ingredient" accent="rose">
+      <AnalyticsCard
+        title="Waste report"
+        description="By ingredient"
+        accent="rose"
+      >
         <DataTable
           columns={columns}
           data={(report?.items || []).slice(0, 50)}
@@ -225,14 +230,18 @@ export function WasteAnalyticsPage() {
           <FormField label="Quantity">
             <Input
               value={form.quantity}
-              onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, quantity: e.target.value }))
+              }
               placeholder="e.g. 0.5"
             />
           </FormField>
           <FormField label="Notes (optional)" fullWidth>
             <Input
               value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, notes: e.target.value }))
+              }
               placeholder="e.g. spoiled during prep"
             />
           </FormField>
