@@ -12,6 +12,7 @@ import {
   PageShell,
 } from "@/components/ui/erp";
 import { useRecipeQuery } from "@/features/recipes/hooks/useRecipes";
+import { formatRecipeYield } from "@/features/recipes/lib/recipeYieldUnit";
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -40,7 +41,9 @@ export function RecipeDetailsPage() {
         header: "Item",
         cell: ({ row }) => (
           <div>
-            <span className="font-medium">{row.original.inventoryItem?.name}</span>
+            <span className="font-medium">
+              {row.original.inventoryItem?.name}
+            </span>
             <div className="text-xs text-muted-foreground">
               Base: {row.original.inventoryItem?.baseUnit?.symbol}
             </div>
@@ -68,7 +71,9 @@ export function RecipeDetailsPage() {
         id: "total",
         header: "Total cost",
         cell: ({ row }) => (
-          <span className="font-medium">{formatMoney(row.original.totalCostCents)}</span>
+          <span className="font-medium">
+            {formatMoney(row.original.totalCostCents)}
+          </span>
         ),
       },
     ],
@@ -94,8 +99,29 @@ export function RecipeDetailsPage() {
 
       <KpiGrid cols={4}>
         <KpiCard
-          label="Total cost"
+          label="Recipe cost"
           value={formatMoney(recipe?.totalCostCents)}
+          icon={DollarSign}
+          accent="amber"
+          loading={recipeQuery.isLoading}
+        />
+        <KpiCard
+          label="Yield"
+          value={
+            recipe
+              ? formatRecipeYield({
+                  yieldQuantity: recipe.yieldQuantity,
+                  yieldUnit: recipe.yieldUnit,
+                })
+              : "—"
+          }
+          icon={ChefHat}
+          accent="indigo"
+          loading={recipeQuery.isLoading}
+        />
+        <KpiCard
+          label="Cost / yield unit"
+          value={formatMoney(recipe?.costPerYieldUnit)}
           icon={DollarSign}
           accent="amber"
           loading={recipeQuery.isLoading}
@@ -108,14 +134,21 @@ export function RecipeDetailsPage() {
           loading={recipeQuery.isLoading}
         />
         <KpiCard
-          label="Profit"
-          value={formatMoney(recipe?.estimatedProfitCents)}
+          label="Profit / yield unit"
+          value={formatMoney(recipe?.profitPerYieldUnit)}
           icon={ChefHat}
           accent="emerald"
           loading={recipeQuery.isLoading}
         />
         <KpiCard
-          label="Margin"
+          label="Food cost %"
+          value={`${toNumber(recipe?.foodCostPercentage).toFixed(1)}%`}
+          icon={Percent}
+          accent="rose"
+          loading={recipeQuery.isLoading}
+        />
+        <KpiCard
+          label="Estimated profit margin"
           value={`${toNumber(recipe?.estimatedProfitMargin).toFixed(1)}%`}
           icon={Percent}
           accent="purple"

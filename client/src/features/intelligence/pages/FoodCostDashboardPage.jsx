@@ -9,7 +9,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { DollarSign, Percent, TrendingDown, UtensilsCrossed } from "lucide-react";
+import {
+  DollarSign,
+  Percent,
+  TrendingDown,
+  UtensilsCrossed,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -47,19 +52,30 @@ export function FoodCostDashboardPage() {
   const recipes = reportQuery.data || [];
 
   const kpis = useMemo(() => {
-    const totalCost = recipes.reduce(
-      (acc, r) => acc + toNumber(r.totalCostCents),
-      0,
-    );
-    const totalSelling = recipes.reduce(
-      (acc, r) => acc + toNumber(r.sellingPriceCents),
-      0,
-    );
+    const avgCostPerYield = recipes.length
+      ? recipes.reduce((acc, r) => acc + toNumber(r.costPerYieldUnit), 0) /
+        recipes.length
+      : 0;
+    const avgSelling = recipes.length
+      ? recipes.reduce((acc, r) => acc + toNumber(r.sellingPriceCents), 0) /
+        recipes.length
+      : 0;
+    const avgFoodCost = recipes.length
+      ? recipes.reduce((acc, r) => acc + toNumber(r.foodCostPercentage), 0) /
+        recipes.length
+      : 0;
     const avgMargin = recipes.length
       ? recipes.reduce((acc, r) => acc + toNumber(r.estimatedProfitMargin), 0) /
         recipes.length
       : 0;
-    return { count: recipes.length, totalCost, totalSelling, avgMargin };
+
+    return {
+      count: recipes.length,
+      avgCostPerYield,
+      avgSelling,
+      avgFoodCost,
+      avgMargin,
+    };
   }, [recipes]);
 
   const topMargin = useMemo(
@@ -67,7 +83,8 @@ export function FoodCostDashboardPage() {
       [...recipes]
         .sort(
           (a, b) =>
-            toNumber(b.estimatedProfitMargin) - toNumber(a.estimatedProfitMargin),
+            toNumber(b.estimatedProfitMargin) -
+            toNumber(a.estimatedProfitMargin),
         )
         .slice(0, 8)
         .map((r) => ({
@@ -82,7 +99,8 @@ export function FoodCostDashboardPage() {
       [...recipes]
         .sort(
           (a, b) =>
-            toNumber(a.estimatedProfitMargin) - toNumber(b.estimatedProfitMargin),
+            toNumber(a.estimatedProfitMargin) -
+            toNumber(b.estimatedProfitMargin),
         )
         .slice(0, 8),
     [recipes],
@@ -99,13 +117,19 @@ export function FoodCostDashboardPage() {
       },
       {
         id: "cost",
-        header: "Cost",
-        cell: ({ row }) => formatMoney(row.original.totalCostCents),
+        header: "Cost / yield",
+        cell: ({ row }) => formatMoney(row.original.costPerYieldUnit),
       },
       {
         id: "selling",
         header: "Selling",
         cell: ({ row }) => formatMoney(row.original.sellingPriceCents),
+      },
+      {
+        id: "foodCost",
+        header: "Food cost %",
+        cell: ({ row }) =>
+          `${toNumber(row.original.foodCostPercentage).toFixed(1)}%`,
       },
       {
         id: "margin",
@@ -145,22 +169,22 @@ export function FoodCostDashboardPage() {
           loading={reportQuery.isLoading}
         />
         <KpiCard
-          label="Total cost (sum)"
-          value={formatMoney(kpis.totalCost)}
+          label="Avg cost / yield"
+          value={formatMoney(kpis.avgCostPerYield)}
           icon={TrendingDown}
           accent="amber"
           loading={reportQuery.isLoading}
         />
         <KpiCard
-          label="Total selling (sum)"
-          value={formatMoney(kpis.totalSelling)}
+          label="Avg selling"
+          value={formatMoney(kpis.avgSelling)}
           icon={DollarSign}
           accent="blue"
           loading={reportQuery.isLoading}
         />
         <KpiCard
-          label="Avg margin"
-          value={`${kpis.avgMargin.toFixed(1)}%`}
+          label="Avg food cost %"
+          value={`${kpis.avgFoodCost.toFixed(1)}%`}
           icon={Percent}
           accent="emerald"
           loading={reportQuery.isLoading}
@@ -176,12 +200,22 @@ export function FoodCostDashboardPage() {
         >
           <ChartWrapper empty={topMargin.length === 0} height={300}>
             <BarChart data={topMargin} margin={{ left: 8, right: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} height={48} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                className="stroke-border/50"
+              />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 10 }}
+                interval={0}
+                height={48}
+              />
               <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
               <Tooltip
                 content={
-                  <ChartTooltip formatter={(v) => [`${Number(v).toFixed(2)}%`, "Margin"]} />
+                  <ChartTooltip
+                    formatter={(v) => [`${Number(v).toFixed(2)}%`, "Margin"]}
+                  />
                 }
               />
               <Bar dataKey="margin" radius={[6, 6, 0, 0]}>

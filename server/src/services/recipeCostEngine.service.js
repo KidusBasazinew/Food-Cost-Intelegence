@@ -5,6 +5,7 @@ import {
   calculateProfitCents,
   calculateProfitMarginPercent,
 } from "./profitCalculation.service.js";
+import { withRecipeYieldMetrics } from "./recipeYieldMetrics.service.js";
 
 function withBranchScope({ hotelId, branchId }) {
   if (branchId) {
@@ -72,9 +73,14 @@ export async function recalculateRecipeCosts({ hotelId, branchId, recipeId }) {
       ingredients: refreshedIngredients,
     });
 
+    const yieldQty = toDecimal(recipe.yieldQuantity ?? 1);
+    const costPerYieldUnit = yieldQty.lte(0)
+      ? new Decimal(0)
+      : totalCostCents.div(yieldQty);
+
     const profitCents = calculateProfitCents({
       sellingPriceCents: recipe.sellingPriceCents,
-      totalCostCents,
+      totalCostCents: costPerYieldUnit,
     });
 
     const margin = calculateProfitMarginPercent({
@@ -90,7 +96,6 @@ export async function recalculateRecipeCosts({ hotelId, branchId, recipeId }) {
         estimatedProfitMargin: margin,
       },
       include: {
-        yieldUnit: true,
         ingredients: {
           include: {
             unit: true,
@@ -101,6 +106,6 @@ export async function recalculateRecipeCosts({ hotelId, branchId, recipeId }) {
       },
     });
 
-    return updatedRecipe;
+    return withRecipeYieldMetrics(updatedRecipe);
   });
 }

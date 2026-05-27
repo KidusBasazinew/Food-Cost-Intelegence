@@ -195,11 +195,26 @@ export function RecipeBuilderPage() {
       />
 
       <KpiGrid cols={4}>
-        <KpiCard label="Total cost" value={formatMoney(recipe?.totalCostCents)} accent="amber" loading={recipeQuery.isLoading} />
-        <KpiCard label="Selling" value={formatMoney(recipe?.sellingPriceCents)} accent="blue" loading={recipeQuery.isLoading} />
-        <KpiCard label="Profit" value={formatMoney(recipe?.estimatedProfitCents)} accent="emerald" loading={recipeQuery.isLoading} />
         <KpiCard
-          label="Margin"
+          label="Recipe cost (total)"
+          value={formatMoney(recipe?.totalCostCents)}
+          accent="amber"
+          loading={recipeQuery.isLoading}
+        />
+        <KpiCard
+          label="Selling (per yield)"
+          value={formatMoney(recipe?.sellingPriceCents)}
+          accent="blue"
+          loading={recipeQuery.isLoading}
+        />
+        <KpiCard
+          label="Profit (per yield)"
+          value={formatMoney(recipe?.estimatedProfitCents)}
+          accent="emerald"
+          loading={recipeQuery.isLoading}
+        />
+        <KpiCard
+          label="Margin (per yield)"
           value={`${toNumber(recipe?.estimatedProfitMargin).toFixed(1)}%`}
           accent="purple"
           loading={recipeQuery.isLoading}
@@ -207,11 +222,15 @@ export function RecipeBuilderPage() {
       </KpiGrid>
 
       <InsightPanel variant="analytics" title="Live costing">
-        Costs update automatically from weighted average inventory prices when you add or edit ingredients.
+        Costs update automatically from weighted average inventory prices when
+        you add or edit ingredients.
       </InsightPanel>
 
       <AnalyticsCard title="Add ingredient" accent="purple">
-        <form onSubmit={onAdd} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <form
+          onSubmit={onAdd}
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
           <FormField label="Inventory item" className="sm:col-span-2">
             <Select
               value={form.inventoryItemId}
@@ -257,14 +276,21 @@ export function RecipeBuilderPage() {
           <FormField label="Quantity">
             <Input
               value={form.quantity}
-              onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, quantity: e.target.value }))
+              }
               placeholder="e.g. 200"
             />
           </FormField>
-          <FormField label="Notes (optional)" className="sm:col-span-2 lg:col-span-4">
+          <FormField
+            label="Notes (optional)"
+            className="sm:col-span-2 lg:col-span-4"
+          >
             <Input
               value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, notes: e.target.value }))
+              }
               placeholder="e.g. chopped"
             />
           </FormField>
@@ -274,7 +300,10 @@ export function RecipeBuilderPage() {
             </Button>
             {est ? (
               <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                Est: {est.qtyBase.toLocaleString(undefined, { maximumFractionDigits: 4 })}{" "}
+                Est:{" "}
+                {est.qtyBase.toLocaleString(undefined, {
+                  maximumFractionDigits: 4,
+                })}{" "}
                 {est.baseSymbol} → {formatMoney(est.totalCostCents)}
               </span>
             ) : (
@@ -288,147 +317,150 @@ export function RecipeBuilderPage() {
 
       <AnalyticsCard title="Ingredients" accent="indigo">
         <div className="overflow-x-auto rounded-xl border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                <tr className="border-b">
-                  <th className="py-2">Item</th>
-                  <th className="py-2">Qty (unit)</th>
-                  <th className="py-2">Qty (base)</th>
-                  <th className="py-2">Cost / Base</th>
-                  <th className="py-2">Total</th>
-                  <th className="py-2"></th>
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <tr className="border-b">
+                <th className="py-2">Item</th>
+                <th className="py-2">Qty (unit)</th>
+                <th className="py-2">Qty (base)</th>
+                <th className="py-2">Cost / Base</th>
+                <th className="py-2">Total</th>
+                <th className="py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {recipeQuery.isLoading ? (
+                <tr>
+                  <td className="py-3 text-muted-foreground" colSpan={6}>
+                    Loading…
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {recipeQuery.isLoading ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={6}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : (recipe?.ingredients || []).length === 0 ? (
-                  <tr>
-                    <td className="py-3 text-muted-foreground" colSpan={6}>
-                      No ingredients yet.
-                    </td>
-                  </tr>
-                ) : (
-                  recipe.ingredients.map((ing) => {
-                    const isEditing = editingId === ing.id;
-                    const item = itemById.get(ing.inventoryItemId);
-                    const baseType = item?.baseUnit?.baseType;
-                    const editUnits = baseType
-                      ? units.filter((u) => u.baseType === baseType)
-                      : units;
+              ) : (recipe?.ingredients || []).length === 0 ? (
+                <tr>
+                  <td className="py-3 text-muted-foreground" colSpan={6}>
+                    No ingredients yet.
+                  </td>
+                </tr>
+              ) : (
+                recipe.ingredients.map((ing) => {
+                  const isEditing = editingId === ing.id;
+                  const item = itemById.get(ing.inventoryItemId);
+                  const baseType = item?.baseUnit?.baseType;
+                  const editUnits = baseType
+                    ? units.filter((u) => u.baseType === baseType)
+                    : units;
 
-                    return (
-                      <tr key={ing.id} className="border-b border-border/50 transition-colors hover:bg-muted/30 last:border-b-0">
-                        <td className="py-2">
-                          <div className="font-medium">
-                            {ing.inventoryItem?.name}
+                  return (
+                    <tr
+                      key={ing.id}
+                      className="border-b border-border/50 transition-colors hover:bg-muted/30 last:border-b-0"
+                    >
+                      <td className="py-2">
+                        <div className="font-medium">
+                          {ing.inventoryItem?.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Base: {ing.inventoryItem?.baseUnit?.symbol}
+                        </div>
+                      </td>
+
+                      <td className="py-2">
+                        {isEditing ? (
+                          <div className="flex gap-2">
+                            <Input
+                              className="h-8"
+                              value={edit.quantity}
+                              onChange={(e) =>
+                                setEdit((s) => ({
+                                  ...s,
+                                  quantity: e.target.value,
+                                }))
+                              }
+                            />
+                            <select
+                              className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
+                              value={edit.unitId}
+                              onChange={(e) =>
+                                setEdit((s) => ({
+                                  ...s,
+                                  unitId: e.target.value,
+                                }))
+                              }
+                            >
+                              {editUnits.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.symbol}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Base: {ing.inventoryItem?.baseUnit?.symbol}
+                        ) : (
+                          <>
+                            {toNumber(ing.quantity)} {ing.unit?.symbol}
+                            {ing.notes ? (
+                              <div className="text-xs text-muted-foreground">
+                                {ing.notes}
+                              </div>
+                            ) : null}
+                          </>
+                        )}
+                      </td>
+
+                      <td className="py-2">
+                        {toNumber(ing.quantityInBaseUnit)}{" "}
+                        {ing.inventoryItem?.baseUnit?.symbol}
+                      </td>
+                      <td className="py-2">
+                        {formatMoney(ing.costPerBaseUnitCents)}
+                      </td>
+                      <td className="py-2">
+                        {formatMoney(ing.totalCostCents)}
+                      </td>
+                      <td className="py-2">
+                        {isEditing ? (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => saveEdit(ing)}
+                              disabled={updateMutation.isPending}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingId(null)}
+                            >
+                              Cancel
+                            </Button>
                           </div>
-                        </td>
-
-                        <td className="py-2">
-                          {isEditing ? (
-                            <div className="flex gap-2">
-                              <Input
-                                className="h-8"
-                                value={edit.quantity}
-                                onChange={(e) =>
-                                  setEdit((s) => ({
-                                    ...s,
-                                    quantity: e.target.value,
-                                  }))
-                                }
-                              />
-                              <select
-                                className="h-8 rounded-lg border border-input bg-background px-2 text-sm"
-                                value={edit.unitId}
-                                onChange={(e) =>
-                                  setEdit((s) => ({
-                                    ...s,
-                                    unitId: e.target.value,
-                                  }))
-                                }
-                              >
-                                {editUnits.map((u) => (
-                                  <option key={u.id} value={u.id}>
-                                    {u.symbol}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          ) : (
-                            <>
-                              {toNumber(ing.quantity)} {ing.unit?.symbol}
-                              {ing.notes ? (
-                                <div className="text-xs text-muted-foreground">
-                                  {ing.notes}
-                                </div>
-                              ) : null}
-                            </>
-                          )}
-                        </td>
-
-                        <td className="py-2">
-                          {toNumber(ing.quantityInBaseUnit)}{" "}
-                          {ing.inventoryItem?.baseUnit?.symbol}
-                        </td>
-                        <td className="py-2">
-                          {formatMoney(ing.costPerBaseUnitCents)}
-                        </td>
-                        <td className="py-2">
-                          {formatMoney(ing.totalCostCents)}
-                        </td>
-                        <td className="py-2">
-                          {isEditing ? (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => saveEdit(ing)}
-                                disabled={updateMutation.isPending}
-                              >
-                                Save
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingId(null)}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => beginEdit(ing)}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => removeIngredient(ing)}
-                                disabled={deleteMutation.isPending}
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => beginEdit(ing)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => removeIngredient(ing)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </AnalyticsCard>
     </PageShell>
   );

@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ok } from "../utils/apiResponse.js";
 import { prisma } from "../prisma/client.js";
 import { recalculateRecipeCosts } from "../services/recipeCostEngine.service.js";
+import { withRecipeYieldMetrics } from "../services/recipeYieldMetrics.service.js";
 
 function withBranchScope({ hotelId, branchId }) {
   if (branchId) {
@@ -34,11 +35,10 @@ export const foodCostReport = asyncHandler(async (req, res) => {
       ...(req.query.status ? { status: req.query.status } : {}),
     },
     include: {
-      yieldUnit: true,
       _count: { select: { ingredients: true } },
     },
     orderBy: [{ estimatedProfitMargin: "desc" }],
   });
 
-  ok(res, "Food cost report", recipes);
+  ok(res, "Food cost report", recipes.map(withRecipeYieldMetrics));
 });

@@ -19,7 +19,6 @@ export async function getRecipeOrThrow({ hotelId, branchId, id, tx }) {
   const recipe = await client.recipe.findFirst({
     where: { id, ...withBranchScope({ hotelId, branchId }) },
     include: {
-      yieldUnit: true,
       ingredients: {
         include: {
           unit: true,

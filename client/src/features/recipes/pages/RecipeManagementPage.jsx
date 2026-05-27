@@ -11,11 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useMeasurementUnitsQuery } from "@/features/inventory/hooks/useMeasurementUnits";
 import {
   useCreateRecipeMutation,
   useRecipesQuery,
 } from "@/features/recipes/hooks/useRecipes";
+import {
+  formatRecipeYield,
+  RECIPE_YIELD_UNITS,
+} from "@/features/recipes/lib/recipeYieldUnit";
 import {
   DataTable,
   DialogForm,
@@ -46,7 +49,7 @@ function formatMoney(cents) {
 const EMPTY_FORM = {
   name: "",
   yieldQuantity: "1",
-  yieldUnitId: "",
+  yieldUnit: "PORTION",
   sellingPriceCents: "0",
   imageUrl: null,
   status: "ACTIVE",
@@ -54,18 +57,14 @@ const EMPTY_FORM = {
 
 export function RecipeManagementPage() {
   const recipesQuery = useRecipesQuery();
-  const unitsQuery = useMeasurementUnitsQuery();
   const createMutation = useCreateRecipeMutation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
 
-  const units = useMemo(() => unitsQuery.data || [], [unitsQuery.data]);
   const recipes = recipesQuery.data || [];
 
   const canSubmit =
-    form.name.trim().length > 0 &&
-    form.yieldUnitId &&
-    !createMutation.isPending;
+    form.name.trim().length > 0 && form.yieldUnit && !createMutation.isPending;
 
   async function onSubmit() {
     if (!canSubmit) return;
@@ -73,11 +72,11 @@ export function RecipeManagementPage() {
       name: form.name.trim(),
       imageUrl: form.imageUrl?.trim() || null,
       yieldQuantity: form.yieldQuantity,
-      yieldUnitId: form.yieldUnitId,
+      yieldUnit: form.yieldUnit,
       sellingPriceCents: form.sellingPriceCents,
       status: form.status,
     });
-    setForm((f) => ({ ...EMPTY_FORM, yieldUnitId: f.yieldUnitId }));
+    setForm((f) => ({ ...EMPTY_FORM, yieldUnit: f.yieldUnit }));
     setDialogOpen(false);
   }
 
@@ -118,7 +117,10 @@ export function RecipeManagementPage() {
         id: "yield",
         header: "Yield",
         cell: ({ row }) =>
-          `${toNumber(row.original.yieldQuantity)} ${row.original.yieldUnit?.symbol}`,
+          formatRecipeYield({
+            yieldQuantity: row.original.yieldQuantity,
+            yieldUnit: row.original.yieldUnit,
+          }),
       },
       {
         id: "ingredients",
@@ -280,16 +282,16 @@ export function RecipeManagementPage() {
           </FormField>
           <FormField label="Yield unit">
             <Select
-              value={form.yieldUnitId}
-              onValueChange={(v) => setForm((f) => ({ ...f, yieldUnitId: v }))}
+              value={form.yieldUnit}
+              onValueChange={(v) => setForm((f) => ({ ...f, yieldUnit: v }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select unit…" />
               </SelectTrigger>
               <SelectContent>
-                {units.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.name} ({u.symbol})
+                {RECIPE_YIELD_UNITS.map((u) => (
+                  <SelectItem key={u.value} value={u.value}>
+                    {u.label}
                   </SelectItem>
                 ))}
               </SelectContent>

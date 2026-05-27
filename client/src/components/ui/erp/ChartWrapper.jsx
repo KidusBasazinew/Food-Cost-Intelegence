@@ -50,9 +50,11 @@ export function ChartTooltip({ active, payload, label, formatter }) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-xl border bg-card/95 px-3 py-2 shadow-erp-elevated backdrop-blur-sm">
+    <div className="rounded-xl border bg-background px-3 py-2 shadow-lg">
       {label ? (
-        <p className="mb-1 text-xs font-medium text-muted-foreground">{label}</p>
+        <p className="mb-1 text-xs font-medium text-muted-foreground">
+          {label}
+        </p>
       ) : null}
       {payload.map((entry) => (
         <div key={entry.name} className="flex items-center gap-2 text-sm">

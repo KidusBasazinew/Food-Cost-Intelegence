@@ -8,6 +8,7 @@ import {
   getRecipeOrThrow,
 } from "./recipeValidation.service.js";
 import { recalculateRecipeCosts } from "./recipeCostEngine.service.js";
+import { withRecipeYieldMetrics } from "./recipeYieldMetrics.service.js";
 
 function withBranchScope({ hotelId, branchId }) {
   if (branchId) {
@@ -31,18 +32,20 @@ export async function listRecipes({ hotelId, branchId, query }) {
       : {}),
   };
 
-  return prisma.recipe.findMany({
+  const recipes = await prisma.recipe.findMany({
     where,
     include: {
-      yieldUnit: true,
       _count: { select: { ingredients: true } },
     },
     orderBy: [{ updatedAt: "desc" }],
   });
+
+  return recipes.map(withRecipeYieldMetrics);
 }
 
 export async function getRecipeById({ hotelId, branchId, id }) {
-  return getRecipeOrThrow({ hotelId, branchId, id });
+  const recipe = await getRecipeOrThrow({ hotelId, branchId, id });
+  return withRecipeYieldMetrics(recipe);
 }
 
 export async function createRecipe({ hotelId, branchId, input }) {
@@ -51,14 +54,6 @@ export async function createRecipe({ hotelId, branchId, input }) {
     input.sellingPriceCents,
     "INVALID_SELLING_PRICE",
   );
-
-  const yieldUnit = await prisma.measurementUnit.findUnique({
-    where: { id: input.yieldUnitId },
-  });
-
-  if (!yieldUnit) {
-    throw new ApiError(400, "INVALID_YIELD_UNIT", "Yield unit not found");
-  }
 
   const recipe = await prisma.recipe.create({
     data: {
@@ -70,12 +65,11 @@ export async function createRecipe({ hotelId, branchId, input }) {
       imageUrl: input.imageUrl ?? null,
       category: input.category ?? "OTHER",
       yieldQuantity: toDecimal(yieldQty),
-      yieldUnitId: yieldUnit.id,
+      yieldUnit: input.yieldUnit ?? "PORTION",
       preparationInstructions: input.preparationInstructions ?? null,
       status: input.status ?? "ACTIVE",
       sellingPriceCents: toDecimal(sellingPrice),
     },
-    include: { yieldUnit: true },
   });
 
   // Initialize computed fields.
@@ -93,15 +87,6 @@ export async function updateRecipe({ hotelId, branchId, id, input }) {
     assertMoneyNonNegative(input.sellingPriceCents, "INVALID_SELLING_PRICE");
   }
 
-  if (input.yieldUnitId) {
-    const unit = await prisma.measurementUnit.findUnique({
-      where: { id: input.yieldUnitId },
-    });
-    if (!unit) {
-      throw new ApiError(400, "INVALID_YIELD_UNIT", "Yield unit not found");
-    }
-  }
-
   await prisma.recipe.update({
     where: { id: recipe.id },
     data: {
@@ -115,7 +100,7 @@ export async function updateRecipe({ hotelId, branchId, id, input }) {
         input.yieldQuantity === undefined
           ? undefined
           : toDecimal(input.yieldQuantity),
-      yieldUnitId: input.yieldUnitId ?? undefined,
+      yieldUnit: input.yieldUnit ?? undefined,
       preparationInstructions:
         input.preparationInstructions === undefined
           ? undefined

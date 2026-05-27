@@ -3,6 +3,19 @@ import { z } from "zod";
 const uuid = z.string().uuid();
 const decimalLike = z.union([z.string(), z.number()]);
 
+export const RecipeYieldUnitEnum = z.enum([
+  "PORTION",
+  "PLATE",
+  "BOWL",
+  "CUP",
+  "PIECE",
+  "TRAY",
+  "BOTTLE",
+  "BATCH",
+  "LITER",
+  "KILOGRAM",
+]);
+
 export const recipeParamsSchema = {
   params: z.object({ id: uuid }),
 };
@@ -49,7 +62,7 @@ export const createRecipeSchema = {
       .optional(),
     menuItemId: z.string().trim().max(64).optional().nullable(),
     yieldQuantity: decimalLike.optional().default(1),
-    yieldUnitId: uuid,
+    yieldUnit: RecipeYieldUnitEnum.optional().default("PORTION"),
     preparationInstructions: z.string().trim().max(4000).optional().nullable(),
     status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
     sellingPriceCents: decimalLike.optional().default(0),
@@ -79,7 +92,7 @@ export const updateRecipeSchema = {
         .optional(),
       menuItemId: z.string().trim().max(64).optional().nullable(),
       yieldQuantity: decimalLike.optional(),
-      yieldUnitId: uuid.optional(),
+      yieldUnit: RecipeYieldUnitEnum.optional(),
       preparationInstructions: z
         .string()
         .trim()

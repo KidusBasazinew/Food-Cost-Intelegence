@@ -208,6 +208,19 @@ enum ConsumptionSourceType {
   ADJUSTMENT
 }
 
+enum RecipeYieldUnit {
+  PORTION
+  PLATE
+  BOWL
+  CUP
+  PIECE
+  TRAY
+  BOTTLE
+  BATCH
+  LITER
+  KILOGRAM
+}
+
 model MeasurementUnit {
   id               String              @id @default(uuid())
   name             String
@@ -221,7 +234,6 @@ model MeasurementUnit {
   inventoryItems   InventoryItem[]     @relation("InventoryItemBaseUnit")
   inventoryTxns    InventoryTransaction[]
   purchaseItems    PurchaseItem[]
-  recipeYields     Recipe[]            @relation("RecipeYieldUnit")
   recipeIngredients RecipeIngredient[]
 
   @@unique([baseType, symbol])
@@ -268,7 +280,7 @@ model Recipe {
   imageUrl              String?
   category              RecipeCategory @default(OTHER)
   yieldQuantity         Decimal      @default(1)
-  yieldUnitId           String
+  yieldUnit             RecipeYieldUnit @default(PORTION)
   preparationInstructions String?
   status                RecipeStatus @default(ACTIVE)
   totalCostCents        Decimal      @default(0)
@@ -280,7 +292,6 @@ model Recipe {
 
   hotel     Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   branch    Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  yieldUnit MeasurementUnit  @relation("RecipeYieldUnit", fields: [yieldUnitId], references: [id], onDelete: Restrict)
 
   ingredients  RecipeIngredient[]
   consumptions InventoryConsumption[]

@@ -41,7 +41,9 @@ export function ProfitabilityReportsPage() {
     [recipes],
   );
 
-  const profitable = sorted.filter((r) => toNumber(r.estimatedProfitCents) >= 0);
+  const profitable = sorted.filter(
+    (r) => toNumber(r.estimatedProfitCents) >= 0,
+  );
   const lossMaking = sorted.filter((r) => toNumber(r.estimatedProfitCents) < 0);
   const lowMargin = sorted.filter(
     (r) =>
@@ -60,8 +62,8 @@ export function ProfitabilityReportsPage() {
       },
       {
         id: "cost",
-        header: "Cost",
-        cell: ({ row }) => formatMoney(row.original.totalCostCents),
+        header: "Cost / yield",
+        cell: ({ row }) => formatMoney(row.original.costPerYieldUnit),
       },
       {
         id: "selling",
@@ -70,22 +72,34 @@ export function ProfitabilityReportsPage() {
       },
       {
         id: "profit",
-        header: "Profit",
+        header: "Profit / yield",
         cell: ({ row }) => {
-          const loss = toNumber(row.original.estimatedProfitCents) < 0;
+          const loss = toNumber(row.original.profitPerYieldUnit) < 0;
           return (
-            <span className={loss ? "font-medium text-rose-600 dark:text-rose-400" : "font-medium text-emerald-600 dark:text-emerald-400"}>
-              {formatMoney(row.original.estimatedProfitCents)}
+            <span
+              className={
+                loss
+                  ? "font-medium text-rose-600 dark:text-rose-400"
+                  : "font-medium text-emerald-600 dark:text-emerald-400"
+              }
+            >
+              {formatMoney(row.original.profitPerYieldUnit)}
             </span>
           );
         },
+      },
+      {
+        id: "foodCost",
+        header: "Food cost %",
+        cell: ({ row }) =>
+          `${toNumber(row.original.foodCostPercentage).toFixed(1)}%`,
       },
       {
         id: "margin",
         header: "Margin",
         cell: ({ row }) => {
           const margin = toNumber(row.original.estimatedProfitMargin);
-          const loss = toNumber(row.original.estimatedProfitCents) < 0;
+          const loss = toNumber(row.original.profitPerYieldUnit) < 0;
           return (
             <StatusBadge
               status={loss ? "loss" : margin < 10 ? "warning" : "profitable"}
@@ -129,8 +143,8 @@ export function ProfitabilityReportsPage() {
 
       {lossMaking.length > 0 ? (
         <InsightPanel variant="critical" title="Menu engineering alert">
-          {lossMaking.length} recipe{lossMaking.length !== 1 ? "s are" : " is"} selling
-          below cost. Review pricing or ingredient costs immediately.
+          {lossMaking.length} recipe{lossMaking.length !== 1 ? "s are" : " is"}{" "}
+          selling below cost. Review pricing or ingredient costs immediately.
         </InsightPanel>
       ) : null}
 
