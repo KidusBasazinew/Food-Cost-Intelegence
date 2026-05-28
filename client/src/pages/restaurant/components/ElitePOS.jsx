@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   MapPin,
   Bell,
@@ -21,6 +21,116 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { recipesApi } from "@/features/recipes/api/recipesApi";
+import { posService } from "@/services/pos.service";
+
+function centsToETB(cents) {
+  const n = Number(cents ?? 0);
+  if (!Number.isFinite(n)) return 0;
+  return n / 100;
+}
+
+function recipeCategoryToPosCategory(category) {
+  switch (category) {
+    case "BREAKFAST":
+      return "Breakfast";
+    case "DRINK":
+      return "Drinks";
+    case "MAIN":
+    case "SIDE":
+    case "APPETIZER":
+    case "SALAD":
+    case "SOUP":
+    case "SNACK":
+    case "DESSERT":
+      return "Lunch";
+    default:
+      return "All";
+  }
+}
+
+function parseGuestCount(guestsText = "") {
+  const n = Number(String(guestsText).split(" ")[0]);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+function cartKey(tableNumber) {
+  return `pos_cart_v1_table_${tableNumber}`;
+}
+
+function metaKey(tableNumber) {
+  return `pos_meta_v1_table_${tableNumber}`;
+}
+
+function safeGetItem(key) {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(key, value) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+}
+
+function safeRemoveItem(key) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
+function loadTableState(tableNumber) {
+  const activeTableDetails = initialTablesData[tableNumber] || {
+    guests: "0 Person",
+    waiter: "Unassigned",
+    status: "Vacant",
+    time: "--:--",
+  };
+
+  let cart = [];
+  let meta = null;
+
+  try {
+    const rawCart = safeGetItem(cartKey(tableNumber));
+    const parsedCart = rawCart ? JSON.parse(rawCart) : [];
+    cart = Array.isArray(parsedCart) ? parsedCart : [];
+  } catch {
+    cart = [];
+  }
+
+  try {
+    const rawMeta = safeGetItem(metaKey(tableNumber));
+    meta = rawMeta ? JSON.parse(rawMeta) : null;
+  } catch {
+    meta = null;
+  }
+
+  const fallbackWaiterName = activeTableDetails.waiter;
+  const fallbackCustomerCount = parseGuestCount(activeTableDetails.guests);
+
+  return {
+    cart,
+    orderId: meta?.orderId ?? null,
+    status: meta?.status ?? "DRAFT",
+    notes: meta?.notes ?? "",
+    waiterName: meta?.waiterName ?? fallbackWaiterName,
+    customerCount:
+      Number(meta?.customerCount) > 0
+        ? Number(meta.customerCount)
+        : fallbackCustomerCount,
+  };
+}
 
 // Static Data matching your initial structure
 const INITIAL_MEALS = [
@@ -109,6 +219,9 @@ export default function ElitePOS() {
   const [currentTable, setCurrentTable] = useState(1);
   const [isTableSelectorOpen, setIsTableSelectorOpen] = useState(false);
 
+  const [menuMeals, setMenuMeals] = useState(INITIAL_MEALS);
+  const [menuLoading, setMenuLoading] = useState(false);
+
   // Extract the active table details dynamically
   const activeTableDetails = initialTablesData[currentTable] || {
     guests: "0 Person",
@@ -117,38 +230,112 @@ export default function ElitePOS() {
     time: "--:--",
   };
 
+  const [waiterName, setWaiterName] = useState(
+    () => loadTableState(1).waiterName,
+  );
+
+  const waiterOptions = useMemo(() => {
+    const unique = new Set();
+
+    Object.values(initialTablesData).forEach((t) => {
+      const name = String(t?.waiter ?? "").trim();
+      if (name) unique.add(name);
+    });
+
+    const current = String(waiterName ?? "").trim();
+    if (current) unique.add(current);
+
+    const list = Array.from(unique);
+
+    // Keep Unassigned at the top if present, then sort the rest.
+    const unassignedIndex = list.findIndex(
+      (n) => n.toLowerCase() === "unassigned",
+    );
+    const unassigned =
+      unassignedIndex > -1 ? list.splice(unassignedIndex, 1)[0] : null;
+    list.sort((a, b) => a.localeCompare(b));
+
+    return unassigned ? [unassigned, ...list] : list;
+  }, [waiterName]);
+  const [customerCount, setCustomerCount] = useState(
+    () => loadTableState(1).customerCount,
+  );
+  const [orderNotes, setOrderNotes] = useState(() => loadTableState(1).notes);
+
+  const [activeOrderId, setActiveOrderId] = useState(
+    () => loadTableState(1).orderId,
+  );
+  const [activeOrderStatus, setActiveOrderStatus] = useState(
+    () => loadTableState(1).status,
+  );
+  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [completing, setCompleting] = useState(false);
+
   // Navigation & Filtering State
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Cart State
-  const [cart, setCart] = useState([
-    {
-      id: "beef-steak",
-      name: "Beef Steak Premium",
-      price: 24.99,
-      quantity: 1,
-      notes: "Medium Rare, Extra Sauce",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBp69L8D9cPeMMqB99UhtHR8aNCHgACQPgzSKlQq3Skfdd1d6WiGFt7D7KZbCFvz3m2KVcz4RluaSzX2nWMfKvfrkzC_UjfynHfR8RjhRS2IutbrUmfxL2cFMoESJ8NeVnkkYwhXTsOfjsOQgGH2gaE5zp4kZX1Xv1MTbqVCAhS_aNZlZs2clDAKZ94t3aeLozBnXEnCqgM3XiNG8DbtVitJnmlKq0OnfoZqpk7AnYsFW47O0mdVRwkOtfyJMGA3zl08gNy7qX517A",
-    },
-    {
-      id: "classic-burger",
-      name: "Classic Burger",
-      price: 12.99,
-      quantity: 2,
-      notes: "Standard prep",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBp69L8D9cPeMMqB99UhtHR8aNCHgACQPgzSKlQq3Skfdd1d6WiGFt7D7KZbCFvz3m2KVcz4RluaSzX2nWMfKvfrkzC_UjfynHfR8RjhRS2IutbrUmfxL2cFMoESJ8NeVnkkYwhXTsOfjsOQgGH2gaE5zp4kZX1Xv1MTbqVCAhS_aNZlZs2clDAKZ94t3aeLozBnXEnCqgM3XiNG8DbtVitJnmlKq0OnfoZqpk7AnYsFW47O0mdVRwkOtfyJMGA3zl08gNy7qX517A",
-    },
-  ]);
+  const [cart, setCart] = useState(() => loadTableState(1).cart);
 
   // Modal/Customization Drawer State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  useEffect(() => {
+    safeSetItem(cartKey(currentTable), JSON.stringify(cart));
+  }, [cart, currentTable]);
+
+  const handleSelectTable = (tableNumber) => {
+    const next = loadTableState(tableNumber);
+    setCurrentTable(tableNumber);
+    setCart(next.cart);
+    setActiveOrderId(next.orderId);
+    setActiveOrderStatus(next.status);
+    setOrderNotes(next.notes);
+    setWaiterName(next.waiterName);
+    setCustomerCount(next.customerCount);
+    setIsTableSelectorOpen(false);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadMenu() {
+      setMenuLoading(true);
+      try {
+        const rows = await recipesApi.list({ status: "ACTIVE" });
+        if (!mounted) return;
+
+        const mapped = (rows ?? []).map((r) => ({
+          id: r.id,
+          name: r.name,
+          description: r.description || "",
+          price: centsToETB(r.sellingPriceCents),
+          category: recipeCategoryToPosCategory(r.category),
+          tag: null,
+          image:
+            r.imageUrl ||
+            "https://lh3.googleusercontent.com/aida-public/AB6AXuAZrjSx462fjkzouToRG0nSQGlKj879LqFBq3nPqllBKQKYwTSMu-9iHMDqjJ2iM66KnronAa20S-mlU28BqqtVFZLb4EvHvKwdMGWNAb6mQqv4BQSjUM-FtJ1_lqe1ndwe01fpoW_T04AXF4FbmCwro-8NUZdHN1OAB-t2a_daqgjYXdT2ZTlNQQUHuu4dqaz7ECd-LG4dqWDsyvNeYDITrDq2KQLqW3ZFdvaGaDvQCOOL_BPdQ7KXv0sVUum2uirqVBpilOl4rs4",
+        }));
+
+        if (mapped.length > 0) setMenuMeals(mapped);
+      } catch (err) {
+        toast.error(err?.message || "Failed to load menu recipes");
+      } finally {
+        if (mounted) setMenuLoading(false);
+      }
+    }
+
+    loadMenu();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Computed Properties: Filter Meals
   const filteredMeals = useMemo(() => {
-    return INITIAL_MEALS.filter((meal) => {
+    return menuMeals.filter((meal) => {
       const matchesCategory =
         activeCategory === "All" || meal.category === activeCategory;
       const matchesSearch =
@@ -156,7 +343,7 @@ export default function ElitePOS() {
         meal.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, menuMeals]);
 
   // Computed Properties: Cart Math Totals
   const totals = useMemo(() => {
@@ -180,7 +367,9 @@ export default function ElitePOS() {
   // Cart Operations Handlers
   const handleAddToOrder = (meal) => {
     setCart((prevCart) => {
-      const existingIndex = prevCart.findIndex((item) => item.id === meal.id);
+      const existingIndex = prevCart.findIndex(
+        (item) => item.recipeId === meal.id,
+      );
       if (existingIndex > -1) {
         const nextCart = [...prevCart];
         nextCart[existingIndex].quantity += 1;
@@ -189,11 +378,12 @@ export default function ElitePOS() {
       return [
         ...prevCart,
         {
-          id: meal.id,
+          recipeId: meal.id,
           name: meal.name,
           price: meal.price,
           quantity: 1,
           notes: "Standard prep",
+          image: meal.image,
         },
       ];
     });
@@ -203,7 +393,7 @@ export default function ElitePOS() {
     setCart((prevCart) => {
       return prevCart
         .map((item) => {
-          if (item.id === id) {
+          if (item.recipeId === id) {
             const nextQty = item.quantity + amount;
             return nextQty > 0 ? { ...item, quantity: nextQty } : item;
           }
@@ -214,14 +404,174 @@ export default function ElitePOS() {
   };
 
   const handleRemoveItem = (id) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
+    setCart((prevCart) => prevCart.filter((item) => item.recipeId !== id));
   };
 
   const handleClearOrder = () => {
     if (window.confirm("Are you sure you want to cancel the current order?")) {
-      setCart([]);
+      (async () => {
+        try {
+          if (activeOrderId) {
+            await posService.updateStatus(activeOrderId, "CANCELLED");
+          }
+        } catch (err) {
+          toast.error(err?.message || "Failed to cancel order");
+          return;
+        }
+
+        setCart([]);
+        setActiveOrderId(null);
+        setActiveOrderStatus("DRAFT");
+        setOrderNotes("");
+        safeRemoveItem(metaKey(currentTable));
+        toast.success("Order cancelled");
+      })();
     }
   };
+
+  async function persistMeta(next) {
+    safeSetItem(metaKey(currentTable), JSON.stringify(next));
+  }
+
+  async function handleSaveDraft() {
+    if (cart.length === 0) return;
+    setSaving(true);
+    try {
+      const input = {
+        tableNumber: currentTable,
+        waiterName,
+        customerCount,
+        notes: orderNotes,
+        items: cart.map((c) => ({
+          recipeId: c.recipeId,
+          quantity: c.quantity,
+          notes: c.notes,
+        })),
+      };
+
+      let result;
+      if (!activeOrderId) {
+        result = await posService.createDraftOrder(input);
+        setActiveOrderId(result.id);
+        setActiveOrderStatus(result.status);
+        await persistMeta({
+          orderId: result.id,
+          status: result.status,
+          waiterName,
+          customerCount,
+          notes: orderNotes,
+        });
+      } else {
+        const edited = await posService.updateOrder(activeOrderId, input);
+        setActiveOrderStatus(edited?.order?.status ?? activeOrderStatus);
+        await persistMeta({
+          orderId: activeOrderId,
+          status: edited?.order?.status ?? activeOrderStatus,
+          waiterName,
+          customerCount,
+          notes: orderNotes,
+        });
+      }
+
+      toast.success("Draft saved");
+    } catch (err) {
+      toast.error(err?.message || "Failed to save draft");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSendToKitchen() {
+    if (cart.length === 0) return;
+    setSending(true);
+    try {
+      const input = {
+        tableNumber: currentTable,
+        waiterName,
+        customerCount,
+        notes: orderNotes,
+        items: cart.map((c) => ({
+          recipeId: c.recipeId,
+          quantity: c.quantity,
+          notes: c.notes,
+        })),
+      };
+
+      if (!activeOrderId) {
+        const res = await posService.sendToKitchen(input);
+        const order = res?.order;
+        setActiveOrderId(order?.id ?? null);
+        setActiveOrderStatus(order?.status ?? "SENT_TO_KITCHEN");
+        await persistMeta({
+          orderId: order?.id,
+          status: order?.status ?? "SENT_TO_KITCHEN",
+          waiterName,
+          customerCount,
+          notes: orderNotes,
+        });
+      } else {
+        await posService.updateOrder(activeOrderId, input);
+
+        if (activeOrderStatus === "DRAFT") {
+          const res = await posService.updateStatus(
+            activeOrderId,
+            "SENT_TO_KITCHEN",
+          );
+          const nextStatus = res?.order?.status ?? "SENT_TO_KITCHEN";
+          setActiveOrderStatus(nextStatus);
+          await persistMeta({
+            orderId: activeOrderId,
+            status: nextStatus,
+            waiterName,
+            customerCount,
+            notes: orderNotes,
+          });
+        } else {
+          await persistMeta({
+            orderId: activeOrderId,
+            status: activeOrderStatus,
+            waiterName,
+            customerCount,
+            notes: orderNotes,
+          });
+          toast.success("Order updated (inventory adjusted)");
+          return;
+        }
+      }
+
+      toast.success("Sent to kitchen (inventory consumed)");
+    } catch (err) {
+      const shortage = err?.data?.details?.shortages?.[0];
+      if (shortage) {
+        toast.error(
+          `Insufficient stock: ${shortage.name} (need ${shortage.requiredQtyInBaseUnit}, have ${shortage.availableQtyInBaseUnit})`,
+        );
+      } else {
+        toast.error(err?.message || "Failed to send to kitchen");
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleCompletePayment() {
+    if (!activeOrderId) return;
+    setCompleting(true);
+    try {
+      const res = await posService.updateStatus(activeOrderId, "COMPLETED");
+      const nextStatus = res?.order?.status ?? "COMPLETED";
+      toast.success("Payment completed");
+      setActiveOrderStatus(nextStatus);
+      setCart([]);
+      setActiveOrderId(null);
+      setOrderNotes("");
+      safeRemoveItem(metaKey(currentTable));
+    } catch (err) {
+      toast.error(err?.message || "Failed to complete payment");
+    } finally {
+      setCompleting(false);
+    }
+  }
 
   return (
     <div className="bg-background text-on-surface font-body-md overflow-hidden h-screen w-screen flex flex-col">
@@ -255,7 +605,7 @@ export default function ElitePOS() {
               />
             </div>
             <span className="font-label-lg text-sm font-semibold">
-              Julian S.
+              {waiterName}
             </span>
           </div>
         </div>
@@ -307,8 +657,7 @@ export default function ElitePOS() {
                                 : "border-outline-variant/10 hover:bg-surface-container-high text-on-surface bg-surface-container-lowest"
                             }`}
                             onClick={() => {
-                              setCurrentTable(number);
-                              setIsTableSelectorOpen(false);
+                              handleSelectTable(number);
                             }}
                           >
                             {number}
@@ -370,6 +719,51 @@ export default function ElitePOS() {
                 >
                   {activeTableDetails.status}
                 </span>
+              </div>
+            </div>
+
+            {/* Order Details (POS Payload) */}
+            <div className="space-y-3 bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-outline-variant/10">
+              <div className="space-y-1">
+                <label className="text-on-surface-variant/70 font-medium text-xs">
+                  Waiter
+                </label>
+                <select
+                  value={waiterName}
+                  onChange={(e) => setWaiterName(e.target.value)}
+                  className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant/20 rounded-xl focus:ring-2 focus:ring-primary/20 text-sm"
+                >
+                  {waiterOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-on-surface-variant/70 font-medium text-xs">
+                  Customer count
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={customerCount}
+                  onChange={(e) => setCustomerCount(Number(e.target.value))}
+                  className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant/20 rounded-xl focus:ring-2 focus:ring-primary/20 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-on-surface-variant/70 font-medium text-xs">
+                  Order notes
+                </label>
+                <textarea
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  className="w-full min-h-20 px-3 py-2 bg-surface-container-low border border-outline-variant/20 rounded-xl focus:ring-2 focus:ring-primary/20 text-sm"
+                  placeholder="Allergies, rush, special instructions…"
+                />
               </div>
             </div>
           </div>
@@ -436,7 +830,7 @@ export default function ElitePOS() {
                     onClick={() => setActiveCategory(category)}
                     className={`px-6 py-2.5 rounded-full font-label-lg text-sm font-semibold whitespace-nowrap transition-all shadow-sm ${
                       activeCategory === category
-                        ? "bg-gradient-to-br from-purple-600 to-indigo-700 text-white shadow-md"
+                        ? "bg-linear-to-br from-purple-600 to-indigo-700 text-white shadow-md"
                         : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
                     }`}
                   >
@@ -450,50 +844,57 @@ export default function ElitePOS() {
           {/* Grid of Meal Cards */}
           <div className="flex-1 overflow-y-auto px-6 pb-24 custom-scrollbar">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredMeals.map((meal) => (
-                <div
-                  key={meal.id}
-                  onClick={() => handleAddToOrder(meal)}
-                  className="group bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-outline-variant/10 flex flex-col active:scale-[0.98] cursor-pointer"
-                >
-                  <div className="relative h-40 overflow-hidden">
-                    <img
-                      alt={meal.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      src={meal.image}
-                    />
-                    {meal.tag && (
-                      <div
-                        className={`absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tighter shadow-sm ${
-                          meal.tag === "Popular" ? "bg-primary" : "bg-secondary"
-                        }`}
-                      >
-                        {meal.tag}
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4 flex flex-col flex-1">
-                    <h4 className="font-headline-sm text-base font-semibold text-on-surface mb-1">
-                      {meal.name}
-                    </h4>
-                    <p className="text-on-surface-variant text-xs mb-4 line-clamp-1">
-                      {meal.description}
-                    </p>
-                    <div className="mt-auto flex items-center justify-between">
-                      <span className="font-bold text-primary text-base">
-                        ETB {meal.price.toFixed(2)}
-                      </span>
-                      <div className="bg-primary-container/20 p-2 rounded-xl group-hover:bg-primary transition-colors flex items-center justify-center">
-                        <PlusCircle className="w-6 h-6 text-primary group-hover:text-white transition-colors" />
+              {menuLoading ? (
+                <div className="col-span-full text-center text-on-surface-variant py-10">
+                  Loading menu…
+                </div>
+              ) : filteredMeals.length === 0 ? (
+                <div className="col-span-full text-center text-on-surface-variant py-10">
+                  No meals found.
+                </div>
+              ) : (
+                filteredMeals.map((meal) => (
+                  <div
+                    key={meal.id}
+                    onClick={() => handleAddToOrder(meal)}
+                    className="group bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-outline-variant/10 flex flex-col active:scale-[0.98] cursor-pointer"
+                  >
+                    <div className="relative h-40 overflow-hidden">
+                      <img
+                        alt={meal.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        src={meal.image}
+                      />
+                      {meal.tag && (
+                        <div
+                          className={`absolute top-3 left-3 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tighter shadow-sm ${
+                            meal.tag === "Popular"
+                              ? "bg-primary"
+                              : "bg-secondary"
+                          }`}
+                        >
+                          {meal.tag}
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 flex flex-col flex-1">
+                      <h4 className="font-headline-sm text-base font-semibold text-on-surface mb-1">
+                        {meal.name}
+                      </h4>
+                      <p className="text-on-surface-variant text-xs mb-4 line-clamp-1">
+                        {meal.description}
+                      </p>
+                      <div className="mt-auto flex items-center justify-between">
+                        <span className="font-bold text-primary text-base">
+                          ETB {meal.price.toFixed(2)}
+                        </span>
+                        <div className="bg-primary-container/20 p-2 rounded-xl group-hover:bg-primary transition-colors flex items-center justify-center">
+                          <PlusCircle className="w-6 h-6 text-primary group-hover:text-white transition-colors" />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              {filteredMeals.length === 0 && (
-                <div className="col-span-full py-12 text-center text-on-surface-variant">
-                  No products match your search/filter parameters.
-                </div>
+                ))
               )}
             </div>
           </div>
@@ -507,6 +908,11 @@ export default function ElitePOS() {
               <h2 className="font-headline-sm text-lg font-semibold">
                 Current Order
               </h2>
+              {activeOrderId && (
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-surface-container-high text-on-surface-variant">
+                  {activeOrderStatus.replaceAll("_", " ")}
+                </span>
+              )}
             </div>
             <span className="bg-surface-container-high px-2.5 py-1 rounded-full font-label-md text-xs font-medium text-primary">
               {totals.itemCount} {totals.itemCount === 1 ? "Item" : "Items"}
@@ -517,7 +923,7 @@ export default function ElitePOS() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
             {cart.map((item) => (
               <div
-                key={item.id}
+                key={item.recipeId}
                 className="p-4 rounded-2xl bg-surface-container-low border border-outline-variant/10 space-y-3 relative group"
               >
                 <div className="flex justify-between items-start">
@@ -526,7 +932,10 @@ export default function ElitePOS() {
                       {item.quantity}x
                     </div>
                     <img
-                      src={item.image}
+                      src={
+                        item.image ||
+                        "https://lh3.googleusercontent.com/aida-public/AB6AXuAZrjSx462fjkzouToRG0nSQGlKj879LqFBq3nPqllBKQKYwTSMu-9iHMDqjJ2iM66KnronAa20S-mlU28BqqtVFZLb4EvHvKwdMGWNAb6mQqv4BQSjUM-FtJ1_lqe1ndwe01fpoW_T04AXF4FbmCwro-8NUZdHN1OAB-t2a_daqgjYXdT2ZTlNQQUHuu4dqaz7ECd-LG4dqWDsyvNeYDITrDq2KQLqW3ZFdvaGaDvQCOOL_BPdQ7KXv0sVUum2uirqVBpilOl4rs4"
+                      }
                       alt={item.name}
                       className="w-16 h-16 object-cover rounded-lg"
                     />
@@ -546,7 +955,7 @@ export default function ElitePOS() {
                 <div className="flex items-center justify-between pt-2">
                   <div className="flex items-center gap-1.5 bg-surface-container-lowest rounded-lg border border-outline-variant/20 p-0.5">
                     <button
-                      onClick={() => handleUpdateQuantity(item.id, -1)}
+                      onClick={() => handleUpdateQuantity(item.recipeId, -1)}
                       className="p-1 hover:bg-surface-container-highest rounded text-on-surface-variant flex items-center justify-center"
                     >
                       <Minus className="w-4 h-4" />
@@ -555,7 +964,7 @@ export default function ElitePOS() {
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => handleUpdateQuantity(item.id, 1)}
+                      onClick={() => handleUpdateQuantity(item.recipeId, 1)}
                       className="p-1 hover:bg-surface-container-highest rounded text-on-surface-variant flex items-center justify-center"
                     >
                       <Plus className="w-4 h-4" />
@@ -570,7 +979,7 @@ export default function ElitePOS() {
                       <Edit className="w-5 h-5 text-blue-500" />
                     </button>
                     <button
-                      onClick={() => handleRemoveItem(item.id)}
+                      onClick={() => handleRemoveItem(item.recipeId)}
                       className="p-1.5 hover:bg-surface-container-highest rounded-lg transition-colors text-error flex items-center justify-center"
                       title="Remove variant"
                     >
@@ -615,24 +1024,30 @@ export default function ElitePOS() {
             </div>
             <div className="grid grid-cols-1 gap-3">
               <button
-                onClick={() =>
-                  alert(
-                    `Sending ${totals.itemCount} items to kitchen order queue...`,
-                  )
-                }
+                onClick={handleSendToKitchen}
                 disabled={cart.length === 0}
                 className="w-full h-14 bg-primary disabled:opacity-50 text-white rounded-2xl font-label-lg text-sm font-semibold shadow-lg shadow-primary/20 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
               >
                 <Send className="w-5 h-5" />
-                Send To Kitchen
+                {sending ? "Sending…" : "Send To Kitchen"}
               </button>
               <button
-                onClick={() => alert("Draft state saved locally.")}
+                onClick={handleSaveDraft}
                 disabled={cart.length === 0}
                 className="w-full h-14 bg-surface-container-highest disabled:opacity-50 text-on-surface-variant rounded-2xl font-label-lg text-sm font-semibold active:scale-[0.97] transition-all flex items-center justify-center gap-2"
               >
                 <Save className="w-5 h-5" />
-                Save Draft
+                {saving ? "Saving…" : "Save Draft"}
+              </button>
+
+              <button
+                onClick={handleCompletePayment}
+                disabled={!activeOrderId || completing}
+                className="w-full h-14 bg-emerald-600 disabled:opacity-50 text-white rounded-2xl font-label-lg text-sm font-semibold shadow-lg active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+              >
+                <span className="font-semibold">
+                  {completing ? "Completing…" : "Complete Payment"}
+                </span>
               </button>
             </div>
           </div>

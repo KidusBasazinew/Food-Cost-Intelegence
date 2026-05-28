@@ -49,6 +49,15 @@ const navGroups = [
     ],
   },
   {
+    label: "POS",
+    items: [
+      { to: "/pos", label: "POS", icon: ShoppingCart },
+      { to: "/pos/orders", label: "Orders", icon: ClipboardList },
+      { to: "/pos/analytics", label: "Analytics", icon: BarChart3 },
+      { to: "/kitchen", label: "Kitchen Display", icon: UtensilsCrossed },
+    ],
+  },
+  {
     label: "Organization",
     items: [
       { to: "/reports", label: "Reports", icon: Receipt },

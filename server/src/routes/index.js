@@ -19,6 +19,7 @@ import { analyticsWasteRouter } from "./analyticsWaste.routes.js";
 import { analyticsInventoryRouter } from "./analyticsInventory.routes.js";
 import { analyticsSuppliersRouter } from "./analyticsSuppliers.routes.js";
 import { reportsRouter } from "./reports.routes.js";
+import { posRouter } from "./pos.routes.js";
 // import { auditsRouter } from "./audits.routes.js";
 // import { varianceRouter } from "./variance.routes.js";
 // import { leakageRouter } from "./leakage.routes.js";
@@ -49,6 +50,9 @@ apiRouter.use("/analytics/waste", analyticsWasteRouter);
 apiRouter.use("/analytics/inventory", analyticsInventoryRouter);
 apiRouter.use("/analytics/suppliers", analyticsSuppliersRouter);
 apiRouter.use("/reports", reportsRouter);
+
+// Stage 7 — POS Orders + Kitchen
+apiRouter.use("/pos", posRouter);
 
 // Stage 6 — Inventory Audits + Variance/Leakage + Reconciliation
 // apiRouter.use("/audits", auditsRouter);

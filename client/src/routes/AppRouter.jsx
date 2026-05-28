@@ -26,6 +26,9 @@ import { ExecutiveFoodOpsDashboardPage } from "@/features/analytics/pages/Execut
 import { ReportsPage } from "@/features/analytics/pages/ReportsPage";
 import { NotificationsPage } from "@/features/notifications/pages/NotificationsPage";
 import ElitePOS from "@/pages/restaurant/components/ElitePOS";
+import { KitchenDisplayPage } from "@/pages/restaurant/KitchenDisplayPage";
+import { PosAnalyticsPage } from "@/pages/restaurant/PosAnalyticsPage";
+import { PosOrderHistoryPage } from "@/pages/restaurant/PosOrderHistoryPage";
 
 export function AppRouter() {
   return (
@@ -35,7 +38,9 @@ export function AppRouter() {
 
         <Route path="/login" element={<LoginPage />} />
 
-        <Route path="/ops" element={<ElitePOS />} />
+        <Route element={<RequireAuth />}>
+          <Route path="/pos" element={<ElitePOS />} />
+        </Route>
 
         <Route element={<RequireAuth />}>
           <Route element={<DashboardLayout />}>
@@ -93,6 +98,14 @@ export function AppRouter() {
               path="/analytics"
               element={<ExecutiveFoodOpsDashboardPage />}
             />
+
+            <Route path="/kitchen" element={<KitchenDisplayPage />} />
+            <Route
+              path="/pos"
+              element={<Navigate to="/pos/orders" replace />}
+            />
+            <Route path="/pos/orders" element={<PosOrderHistoryPage />} />
+            <Route path="/pos/analytics" element={<PosAnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>

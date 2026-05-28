@@ -58,6 +58,8 @@ model Hotel {
   inventoryConsumptions InventoryConsumption[]
   salesOrders           SalesOrder[]
   notifications         Notification[]
+  posOrders             PosOrder[]
+  stockMovements        StockMovement[]
 
   @@index([status])
   @@index([createdAt])
@@ -86,6 +88,8 @@ model Branch {
   menuAnalyticsSnapshots MenuAnalyticsSnapshot[]
   inventoryForecastSnapshots InventoryForecastSnapshot[]
   notifications         Notification[]
+  posOrders             PosOrder[]
+  stockMovements        StockMovement[]
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -260,6 +264,29 @@ enum ConsumptionSourceType {
   ADJUSTMENT
 }
 
+// =====================================================
+// Stage 7 — POS Orders + Kitchen Flow + Stock Movements
+// =====================================================
+
+enum PosOrderStatus {
+  DRAFT
+  SENT_TO_KITCHEN
+  PREPARING
+  READY
+  SERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum StockMovementType {
+  PURCHASE
+  SALE_CONSUMPTION
+  WASTE
+  ADJUSTMENT
+  RETURN
+  MANUAL_CORRECTION
+}
+
 enum RecipeYieldUnit {
   PORTION
   PLATE
@@ -314,6 +341,7 @@ model InventoryItem {
   purchaseItems PurchaseItem[]
   recipeIngredients RecipeIngredient[]
   consumptions InventoryConsumption[]
+  stockMovements StockMovement[]
   inventoryForecastSnapshots InventoryForecastSnapshot[]
 
   @@index([hotelId])
@@ -348,6 +376,7 @@ model Recipe {
   ingredients  RecipeIngredient[]
   consumptions InventoryConsumption[]
   salesOrderItems SalesOrderItem[]
+  posOrderItems PosOrderItem[]
   menuAnalyticsSnapshots MenuAnalyticsSnapshot[]
 
   @@index([hotelId])
@@ -387,6 +416,7 @@ model InventoryConsumption {
   recipeId               String?
   recipeIngredientId     String?
   inventoryItemId        String
+  posOrderId              String?
   sourceType             ConsumptionSourceType
   sourceId               String?
   quantityConsumed       Decimal
@@ -400,13 +430,101 @@ model InventoryConsumption {
   recipe        Recipe?        @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   recipeIngredient RecipeIngredient? @relation(fields: [recipeIngredientId], references: [id], onDelete: SetNull)
   inventoryItem InventoryItem  @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  posOrder      PosOrder?      @relation(fields: [posOrderId], references: [id], onDelete: SetNull)
 
   @@index([hotelId])
   @@index([branchId])
   @@index([inventoryItemId])
   @@index([recipeId])
   @@index([recipeIngredientId])
+  @@index([posOrderId])
   @@index([sourceType])
+  @@index([createdAt])
+}
+
+model PosOrder {
+  id                 String         @id @default(uuid())
+  hotelId            String
+  branchId           String?
+  orderNumber        String         @unique
+  tableNumber        Int
+  waiterName         String
+  customerCount      Int            @default(1)
+
+  subtotalCents       Decimal        @default(0)
+  taxCents            Decimal        @default(0)
+  serviceChargeCents  Decimal        @default(0)
+  totalCents          Decimal        @default(0)
+
+  status             PosOrderStatus @default(DRAFT)
+  notes              String?
+
+  sentToKitchenAt    DateTime?
+  completedAt        DateTime?
+
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  hotel        Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch       Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  items        PosOrderItem[]
+  consumptions InventoryConsumption[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PosOrderItem {
+  id              String   @id @default(uuid())
+
+  orderId         String
+  recipeId        String
+
+  quantity        Decimal
+  unitPriceCents  Decimal
+  totalPriceCents Decimal
+
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  order           PosOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([recipeId])
+  @@index([createdAt])
+}
+
+model StockMovement {
+  id               String            @id @default(uuid())
+
+  hotelId          String
+  branchId         String?
+  inventoryItemId  String
+  type             StockMovementType
+
+  quantityBefore   Decimal
+  quantityChanged  Decimal
+  quantityAfter    Decimal
+
+  unitCostCents    Decimal?
+  totalCostCents   Decimal?
+
+  referenceType    String?
+  referenceId      String?
+  notes            String?
+
+  createdAt        DateTime          @default(now())
+
+  hotel         Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  inventoryItem InventoryItem  @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryItemId])
+  @@index([type])
   @@index([createdAt])
 }
 
