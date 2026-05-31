@@ -21,6 +21,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/useSidebarStore";
 import { Separator } from "@/components/ui/separator";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 const navGroups = [
   {
@@ -70,6 +71,11 @@ const navGroups = [
 export function Sidebar() {
   const collapsed = useSidebarStore((s) => s.collapsed);
   const closeMobile = useSidebarStore((s) => s.closeMobile);
+  const user = useAuthStore((s) => s.user);
+  const hotel = user?.hotel;
+  const hotelLocation = [hotel?.city, hotel?.country]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <div className="flex h-dvh flex-col bg-sidebar">
@@ -80,16 +86,20 @@ export function Sidebar() {
         )}
       >
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md">
-            <img src="./logo-01.png" alt="Logo" className="h-5 w-5" />
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center ">
+            <img
+              src={hotel?.logoUrl || "./logo-01.png"}
+              alt={hotel?.name ? `${hotel.name} logo` : "Logo"}
+              className="h-16 w-16 object-contain"
+            />
           </div>
           {!collapsed ? (
             <div>
               <div className="text-sm font-bold tracking-tight">
-                K-LABS: Food Ops ERP
+                {hotel?.name || "Food Ops ERP"}
               </div>
               <div className="text-[11px] text-muted-foreground">
-                Kitchen Intelligence
+                {hotelLocation || "Kitchen Intelligence"}
               </div>
             </div>
           ) : null}
@@ -97,7 +107,7 @@ export function Sidebar() {
       </div>
 
       {!collapsed ? (
-        <div className="mx-4 mt-4 rounded-xl border border-violet-200/50 bg-gradient-to-br from-violet-50 to-indigo-50 p-3 dark:border-violet-800/30 dark:from-violet-950/40 dark:to-indigo-950/30">
+        <div className="mx-4 mt-4 rounded-xl border border-violet-200/50 bg-linear-to-br from-violet-50 to-indigo-50 p-3 dark:border-violet-800/30 dark:from-violet-950/40 dark:to-indigo-950/30">
           <div className="flex items-center gap-2 text-xs font-medium text-violet-700 dark:text-violet-300">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -131,7 +141,7 @@ export function Sidebar() {
                     cn(
                       "group relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                       isActive
-                        ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white erp-sidebar-active-glow"
+                        ? "bg-linear-to-r from-violet-600 to-indigo-600 text-white erp-sidebar-active-glow"
                         : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
                     )
                   }

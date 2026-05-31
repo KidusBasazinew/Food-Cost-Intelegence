@@ -3,7 +3,11 @@ import crypto from "node:crypto";
 import { prisma } from "../prisma/client.js";
 import { ApiError } from "../utils/apiError.js";
 import { hashPassword, verifyPassword } from "../utils/hash.js";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt.js";
 
 function slugify(input) {
   return String(input)
@@ -17,6 +21,39 @@ function slugify(input) {
 function sha256Base64(value) {
   return crypto.createHash("sha256").update(value).digest("base64");
 }
+
+const authHotelSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  status: true,
+  logoUrl: true,
+  city: true,
+  country: true,
+};
+
+const authBranchSelect = {
+  id: true,
+  name: true,
+  code: true,
+  status: true,
+};
+
+const authUserSelect = {
+  id: true,
+  hotelId: true,
+  branchId: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  role: true,
+  status: true,
+  lastLoginAt: true,
+  createdAt: true,
+  updatedAt: true,
+  hotel: { select: authHotelSelect },
+  branch: { select: authBranchSelect },
+};
 
 function buildAccessPayload(user) {
   return {
@@ -86,7 +123,7 @@ async function rotateRefreshToken({ existingToken, ipAddress, userAgent }) {
 
   const record = await prisma.refreshToken.findUnique({
     where: { tokenHash },
-    include: { user: true },
+    include: { user: { select: authUserSelect } },
   });
 
   if (!record) {
@@ -188,6 +225,10 @@ export async function login({ email, password, ipAddress, userAgent }) {
 
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
+    select: {
+      ...authUserSelect,
+      passwordHash: true,
+    },
   });
 
   if (!user) {
@@ -203,9 +244,10 @@ export async function login({ email, password, ipAddress, userAgent }) {
     throw new ApiError(401, "UNAUTHORIZED", "Invalid email or password");
   }
 
+  const lastLoginAt = new Date();
   await prisma.user.update({
     where: { id: user.id },
-    data: { lastLoginAt: new Date() },
+    data: { lastLoginAt },
   });
 
   const accessToken = signAccessToken(buildAccessPayload(user));
@@ -215,7 +257,7 @@ export async function login({ email, password, ipAddress, userAgent }) {
     userAgent,
   });
 
-  const safeUser = sanitizeUser(user);
+  const safeUser = sanitizeUser({ ...user, lastLoginAt });
 
   return {
     accessToken,

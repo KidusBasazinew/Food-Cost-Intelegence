@@ -21,6 +21,7 @@ import {
   PageShell,
 } from "@/components/ui/erp";
 import { DashboardNotificationsWidget } from "@/features/notifications/components/DashboardNotificationsWidget";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 const quickLinks = [
   {
@@ -54,11 +55,23 @@ const quickLinks = [
 ];
 
 export function DashboardHomePage() {
+  const user = useAuthStore((s) => s.user);
+  const hotel = user?.hotel;
+  const hotelLocation = [hotel?.city, hotel?.country]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <PageShell>
       <PageHeader
-        title="Welcome to Food Ops ERP"
-        subtitle="Executive operational intelligence for hospitality food operations — inventory, costing, waste, and profitability in one premium workspace."
+        title={
+          hotel?.name ? `Welcome to ${hotel.name}` : "Welcome to Food Ops ERP"
+        }
+        subtitle={
+          hotel?.name
+            ? `Hotel workspace — ${hotelLocation || "Location not set"}`
+            : "Executive operational intelligence for hospitality food operations — inventory, costing, waste, and profitability in one premium workspace."
+        }
         badge={
           <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-300">
             <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
@@ -73,7 +86,36 @@ export function DashboardHomePage() {
             </Link>
           </Button>
         }
-      />
+      >
+        {hotel?.name ? (
+          <div className="mt-3 flex items-center gap-3 rounded-xl border bg-muted/20 p-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-card">
+              {hotel.logoUrl ? (
+                <img
+                  src={hotel.logoUrl}
+                  alt={`${hotel.name} logo`}
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {hotel.name
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((p) => p[0])
+                    .join("")
+                    .toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold">{hotel.name}</div>
+              <div className="truncate text-xs text-muted-foreground">
+                {hotelLocation || "Hotel details"}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </PageHeader>
 
       <KpiGrid cols={4}>
         <KpiCard
@@ -124,7 +166,7 @@ export function DashboardHomePage() {
                 className="group flex items-start gap-3 rounded-xl border bg-muted/20 p-4 transition-all hover:border-primary/30 hover:bg-accent/50 hover:shadow-md"
               >
                 <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm ${
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br text-white shadow-sm ${
                     item.accent === "blue"
                       ? "from-blue-500 to-blue-600"
                       : item.accent === "purple"
