@@ -60,6 +60,7 @@ model Hotel {
   notifications         Notification[]
   posOrders             PosOrder[]
   stockMovements        StockMovement[]
+  stockCounts           StockCount[]
 
   @@index([status])
   @@index([createdAt])
@@ -90,6 +91,7 @@ model Branch {
   notifications         Notification[]
   posOrders             PosOrder[]
   stockMovements        StockMovement[]
+  stockCounts           StockCount[]
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -342,6 +344,7 @@ model InventoryItem {
   recipeIngredients RecipeIngredient[]
   consumptions InventoryConsumption[]
   stockMovements StockMovement[]
+  stockCountItems StockCountItem[]
   inventoryForecastSnapshots InventoryForecastSnapshot[]
 
   @@index([hotelId])
@@ -734,4 +737,58 @@ model InventoryForecastSnapshot {
   @@index([inventoryItemId])
   @@index([branchId])
   @@index([createdAt])
+}
+
+// =====================================================
+// Stage 8 — Inventory Leakage Detection & Variance Intelligence
+// =====================================================
+
+enum StockCountStatus {
+  DRAFT
+  COMPLETED
+}
+
+model StockCount {
+  id        String           @id @default(uuid())
+
+  hotelId   String
+  branchId  String?
+
+  status    StockCountStatus @default(DRAFT)
+
+  countedBy String?
+  notes     String?
+  countedAt DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  items StockCountItem[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([status])
+  @@index([countedAt])
+  @@index([createdAt])
+}
+
+model StockCountItem {
+  id               String  @id @default(uuid())
+
+  stockCountId     String
+  inventoryItemId  String
+
+  systemQuantity   Decimal
+  physicalQuantity Decimal
+  varianceQuantity Decimal
+  variancePercentage Decimal
+
+  stockCount    StockCount    @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@unique([stockCountId, inventoryItemId])
+  @@index([stockCountId])
+  @@index([inventoryItemId])
 }

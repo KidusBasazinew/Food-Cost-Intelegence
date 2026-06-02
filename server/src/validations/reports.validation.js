@@ -11,6 +11,7 @@ const reportType = z.enum([
   "SUPPLIERS",
   "INVENTORY_VALUATION",
   "KITCHEN_PERFORMANCE",
+  "LEAKAGE",
 ]);
 
 export const listReportsSchema = {

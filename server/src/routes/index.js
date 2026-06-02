@@ -20,9 +20,10 @@ import { analyticsInventoryRouter } from "./analyticsInventory.routes.js";
 import { analyticsSuppliersRouter } from "./analyticsSuppliers.routes.js";
 import { reportsRouter } from "./reports.routes.js";
 import { posRouter } from "./pos.routes.js";
+import { stockCountsRouter } from "./stockCounts.routes.js";
+import { leakageRouter } from "./leakage.routes.js";
 // import { auditsRouter } from "./audits.routes.js";
 // import { varianceRouter } from "./variance.routes.js";
-// import { leakageRouter } from "./leakage.routes.js";
 // import { reconciliationRouter } from "./reconciliation.routes.js";
 
 export const apiRouter = Router();
@@ -51,11 +52,14 @@ apiRouter.use("/analytics/inventory", analyticsInventoryRouter);
 apiRouter.use("/analytics/suppliers", analyticsSuppliersRouter);
 apiRouter.use("/reports", reportsRouter);
 
+// Stage 8 — Leakage & Variance Intelligence
+apiRouter.use("/inventory/stock-counts", stockCountsRouter);
+apiRouter.use("/leakage", leakageRouter);
+
 // Stage 7 — POS Orders + Kitchen
 apiRouter.use("/pos", posRouter);
 
 // Stage 6 — Inventory Audits + Variance/Leakage + Reconciliation
 // apiRouter.use("/audits", auditsRouter);
 // apiRouter.use("/variance", varianceRouter);
-// apiRouter.use("/leakage", leakageRouter);
 // apiRouter.use("/reconciliation", reconciliationRouter);

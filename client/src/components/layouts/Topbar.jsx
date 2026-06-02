@@ -40,6 +40,7 @@ const PAGE_TITLES = {
   "/profitability": "Profitability",
   "/purchases": "Purchases",
   "/suppliers": "Suppliers",
+  "/reports/leakage": "Leakage Report",
   "/reports": "Reports",
   "/employees": "Employees",
   "/settings": "Settings",

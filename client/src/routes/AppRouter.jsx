@@ -24,6 +24,7 @@ import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { ExecutiveFoodOpsDashboardPage } from "@/features/analytics/pages/ExecutiveFoodOpsDashboardPage";
 import { ReportsPage } from "@/features/analytics/pages/ReportsPage";
+import { LeakageReportPage } from "@/features/analytics/pages/LeakageReportPage";
 import { NotificationsPage } from "@/features/notifications/pages/NotificationsPage";
 import ElitePOS from "@/pages/restaurant/components/ElitePOS";
 import { KitchenDisplayPage } from "@/pages/restaurant/KitchenDisplayPage";
@@ -89,6 +90,7 @@ export function AppRouter() {
             <Route path="/purchases" element={<PurchaseManagementPage />} />
             <Route path="/suppliers" element={<SupplierManagementPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/reports/leakage" element={<LeakageReportPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route
               path="/employees"

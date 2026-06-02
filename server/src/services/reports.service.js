@@ -56,6 +56,12 @@ export function listAvailableReports() {
       name: "Kitchen Performance",
       description: "Throughput, cost trends, low stock risks",
     },
+    {
+      type: "LEAKAGE",
+      name: "Inventory Leakage / Variance",
+      description:
+        "Stock count variances, missing stock, and estimated loss value",
+    },
   ];
 }
 
@@ -217,6 +223,62 @@ export async function buildReport({
       meta: {
         lowStockRisks: forecast.items,
       },
+    };
+  }
+
+  if (type === "LEAKAGE") {
+    const counts = await prisma.stockCount.findMany({
+      where: {
+        ...withBranchScope({ hotelId, branchId }),
+        status: "COMPLETED",
+        countedAt: { gte: from, lte: to },
+      },
+      include: {
+        items: {
+          include: {
+            inventoryItem: {
+              select: {
+                id: true,
+                name: true,
+                averageCostPerBaseUnitCents: true,
+                baseUnit: { select: { symbol: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ countedAt: "asc" }],
+      take: 200,
+    });
+
+    const rows = [];
+
+    for (const c of counts) {
+      for (const it of c.items ?? []) {
+        const varianceQty = toDecimal(it.varianceQuantity ?? 0);
+        const avgCost = toDecimal(
+          it.inventoryItem?.averageCostPerBaseUnitCents ?? 0,
+        );
+        const lossValueCents = varianceQty.abs().mul(avgCost);
+
+        rows.push({
+          stockCountId: c.id,
+          countedAt: c.countedAt?.toISOString(),
+          inventoryItemId: it.inventoryItemId,
+          itemName: it.inventoryItem?.name,
+          baseUnitSymbol: it.inventoryItem?.baseUnit?.symbol,
+          systemQuantity: toDecimal(it.systemQuantity ?? 0),
+          physicalQuantity: toDecimal(it.physicalQuantity ?? 0),
+          varianceQuantity: varianceQty,
+          variancePercentage: toDecimal(it.variancePercentage ?? 0),
+          varianceLossValueCents: lossValueCents,
+        });
+      }
+    }
+
+    return {
+      title: "Inventory Leakage / Variance Report",
+      rows,
     };
   }
 
