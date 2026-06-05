@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   X,
   ChevronDown,
+  PersonStanding,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -190,19 +191,19 @@ const tableNumber = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const initialTablesData = {
   1: {
     guests: "4 Person",
-    waiter: "Julian S.",
+    waiter: "Selam",
     status: "Ordering",
     time: "12:45",
   },
   2: {
     guests: "2 Person",
-    waiter: "Sarah M.",
+    waiter: "Worku",
     status: "Served",
     time: "13:10",
   },
   3: {
     guests: "6 Person",
-    waiter: "Marcus K.",
+    waiter: "Saba",
     status: "Check Requested",
     time: "11:30",
   },
@@ -597,13 +598,7 @@ export default function ElitePOS() {
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
           </div>
           <div className="flex items-center gap-3 bg-surface-container-low px-3 py-1.5 rounded-full">
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-primary/20">
-              <img
-                alt="Waiter Julian"
-                className="w-full h-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAex2Ys-DIatP-PEs243KZlROYzDTGwLPG-90z78wKF9e2IzaCsB8Bu6P08Wd9xQY7ckiS2QMHYK5l7QvqPrpn95hqIDx_17YVKZ5VX_DoKE6LES2Iw1jKaUxc_0b0sjkSBQAPQHtGpxZ7R2qLMGpJYVEdYxBc2a7cZ-NAPUZe_JH30eZ-Bq6ebb_Ih4byzVsBJTmCdkbPOidBfiAFtzCXKEH_fh_dYQLoVIzPS6YBNcTlux79EaWqwAaOyPnmT3FbKYniY-rp44eM"
-              />
-            </div>
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-primary/20"></div>
             <span className="font-label-lg text-sm font-semibold">
               {waiterName}
             </span>
@@ -1055,7 +1050,7 @@ export default function ElitePOS() {
       </main>
 
       {/* Customization Drawer Trigger Pill */}
-      <div
+      {/* <div
         onClick={() => setIsDrawerOpen(!isDrawerOpen)}
         className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-container-highest/60 backdrop-blur-md px-6 py-3 rounded-full border border-white/40 shadow-xl cursor-pointer hover:bg-surface-container-high transition-all z-40"
       >
@@ -1065,9 +1060,9 @@ export default function ElitePOS() {
             ? "Close customization matrix panel"
             : "Tap to customize selected item"}
         </span>
-      </div>
+      </div> */}
 
-      {/* Optional Customization Drawer Overlay */}
+      {/* Optional Customization Drawer Overlay
       {isDrawerOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex justify-end animate-fadeIn">
           <div className="w-96 bg-surface-container-lowest h-full p-6 shadow-2xl flex flex-col justify-between">
@@ -1096,7 +1091,7 @@ export default function ElitePOS() {
             </button>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

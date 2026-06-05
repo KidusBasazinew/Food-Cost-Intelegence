@@ -9,6 +9,7 @@
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:reset": "prisma db push --force-reset",
     "prisma:seed": "node prisma/seed.js",
     "prisma:studio": "prisma studio"
   },
