@@ -16,6 +16,7 @@ import {
   ChartWrapper,
   CHART_COLORS,
   KpiCard,
+  KpiGrid,
 } from "@/components/ui/erp";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, DoorOpen, Bed, Sparkles } from "lucide-react";
 
 export default function RoomsDashboard() {
   const { data = [], isLoading } = useRoomsQuery();
@@ -188,27 +189,38 @@ export default function RoomsDashboard() {
       {/* Main Layout Container (Vertically stacked using full width) */}
       <div className="mt-4 space-y-6">
         {/* 1. KPI Boxes displayed in a horizontal row on top spanning full width */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+        <KpiGrid cols={3}>
           <KpiCard
-            label="Vacant"
+            label="Vacant rooms"
             value={counts.VACANT}
+            hint="Available for immediate check-in"
+            icon={DoorOpen}
             accent="purple"
             loading={isLoading}
           />
+
           <KpiCard
-            label="Occupied"
+            label="Occupied rooms"
             value={counts.OCCUPIED}
+            hint="Active guest stays"
+            icon={Bed}
             accent="emerald"
             loading={isLoading}
+            // Optional trend formatting matching your manual:
+            // trend={5}
+            // trendLabel="↑ vs yesterday"
           />
+
           <KpiCard
-            label="Dirty"
+            label="Dirty rooms"
             value={counts.DIRTY}
+            hint="Awaiting housekeeping attention"
+            icon={Sparkles}
             accent="amber"
             loading={isLoading}
           />
-        </div>
-
+        </KpiGrid>
         {/* 2. Data Table spanning full width */}
         <DataTable
           columns={columns}

@@ -15,6 +15,7 @@ import {
   FormRow,
   StatusBadge,
   KpiCard,
+  KpiGrid,
 } from "@/components/ui/erp";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,7 +26,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, CalendarDays, BookmarkCheck, UserCheck } from "lucide-react";
 
 export default function ReservationsPage() {
   const { data = [], isLoading } = useReservationsQuery();
@@ -201,21 +202,34 @@ export default function ReservationsPage() {
       {/* Main Layout Container (Vertically stacked using full width) */}
       <div className="mt-4 space-y-6">
         {/* 1. KPI Boxes displayed in a horizontal row on top spanning full width */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <KpiCard label="Total" value={totals.total} loading={isLoading} />
+        <KpiGrid cols={3}>
+          <KpiCard
+            label="Total bookings"
+            value={totals.total}
+            hint="Overall reservation footprint"
+            icon={CalendarDays}
+            accent="blue"
+            loading={isLoading}
+          />
+
           <KpiCard
             label="Reserved"
             value={totals.reserved}
+            hint="Upcoming scheduled arrivals"
+            icon={BookmarkCheck}
             accent="amber"
             loading={isLoading}
           />
+
           <KpiCard
             label="Checked in"
             value={totals.checkedIn}
+            hint="Currently active in-house guests"
+            icon={UserCheck}
             accent="emerald"
             loading={isLoading}
           />
-        </div>
+        </KpiGrid>
 
         {/* 2. Data Table spanning full width */}
         <DataTable

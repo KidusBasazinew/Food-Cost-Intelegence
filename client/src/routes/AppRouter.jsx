@@ -26,6 +26,9 @@ import { ExecutiveFoodOpsDashboardPage } from "@/features/analytics/pages/Execut
 import { ReportsPage } from "@/features/analytics/pages/ReportsPage";
 import { LeakageReportPage } from "@/features/analytics/pages/LeakageReportPage";
 import { NotificationsPage } from "@/features/notifications/pages/NotificationsPage";
+import EmployeesPage from "@/features/workforce/pages/EmployeesPage";
+import AttendanceTerminal from "@/features/workforce/pages/AttendanceTerminal";
+import AttendanceDashboard from "@/features/workforce/pages/AttendanceDashboard";
 import RoomsDashboard from "@/features/roomops/pages/RoomsDashboard";
 import ReservationsPage from "@/features/roomops/pages/ReservationsPage";
 import HousekeepingBoard from "@/features/roomops/pages/HousekeepingBoard";
@@ -108,6 +111,15 @@ export function AppRouter() {
             <Route
               path="/employees"
               element={<PlaceholderPage title="Employees" />}
+            />
+            <Route path="/workforce/employees" element={<EmployeesPage />} />
+            <Route
+              path="/workforce/attendance"
+              element={<AttendanceTerminal />}
+            />
+            <Route
+              path="/workforce/reports"
+              element={<AttendanceDashboard />}
             />
             <Route
               path="/analytics"

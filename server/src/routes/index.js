@@ -18,11 +18,13 @@ import { analyticsMenuEngineeringRouter } from "./analyticsMenuEngineering.route
 import { analyticsWasteRouter } from "./analyticsWaste.routes.js";
 import { analyticsInventoryRouter } from "./analyticsInventory.routes.js";
 import { analyticsSuppliersRouter } from "./analyticsSuppliers.routes.js";
+import { analyticsAttendanceRouter } from "./analyticsAttendance.routes.js";
 import { reportsRouter } from "./reports.routes.js";
 import { posRouter } from "./pos.routes.js";
 import { stockCountsRouter } from "./stockCounts.routes.js";
 import { leakageRouter } from "./leakage.routes.js";
 import { opsRouter } from "./ops.routes.js";
+import { workforceRouter } from "./workforce.routes.js";
 // import { auditsRouter } from "./audits.routes.js";
 // import { varianceRouter } from "./variance.routes.js";
 // import { reconciliationRouter } from "./reconciliation.routes.js";
@@ -52,6 +54,7 @@ apiRouter.use("/analytics/waste", analyticsWasteRouter);
 apiRouter.use("/analytics/inventory", analyticsInventoryRouter);
 apiRouter.use("/analytics/suppliers", analyticsSuppliersRouter);
 apiRouter.use("/reports", reportsRouter);
+apiRouter.use("/analytics/attendance", analyticsAttendanceRouter);
 
 // Stage 8 — Leakage & Variance Intelligence
 apiRouter.use("/inventory/stock-counts", stockCountsRouter);
@@ -59,6 +62,9 @@ apiRouter.use("/leakage", leakageRouter);
 
 // Room Operations (isolated module)
 apiRouter.use("/ops", opsRouter);
+
+// Workforce / Attendance module
+apiRouter.use("/workforce", workforceRouter);
 
 // Stage 7 — POS Orders + Kitchen
 apiRouter.use("/pos", posRouter);

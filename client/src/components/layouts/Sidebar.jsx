@@ -18,6 +18,7 @@ import {
   House,
   Clock,
   Calendar,
+  ListCheck,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -73,6 +74,14 @@ const navGroups = [
       { to: "/ops/late-checkout", label: "Late Checkout", icon: Clock },
       { to: "/ops/housekeeping", label: "Housekeeping", icon: Infinity },
       { to: "/ops/cleaner", label: "Cleaner", icon: Clock },
+    ],
+  },
+  {
+    label: "Employee Attendance",
+    items: [
+      { to: "/workforce/employees", label: "Employees", icon: Users },
+      { to: "/workforce/attendance", label: "Attendance", icon: ListCheck },
+      { to: "/workforce/reports", label: "Reports", icon: BarChart3 },
     ],
   },
 ];

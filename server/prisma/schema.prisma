@@ -50,6 +50,8 @@ model Hotel {
 
   branches Branch[]
   users    User[]
+  employees Employee[]
+  workSchedules WorkSchedule[]
   inventoryItems        InventoryItem[]
   inventoryTransactions InventoryTransaction[]
   suppliers             Supplier[]
@@ -82,6 +84,7 @@ model Branch {
 
   hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   users User[]
+  employees Employee[]
   inventoryItems        InventoryItem[]
   inventoryTransactions InventoryTransaction[]
   suppliers             Supplier[]
@@ -929,5 +932,110 @@ model HousekeepingTask {
   @@index([roomId])
   @@index([status])
   @@index([kind])
+}
+
+// =====================================================
+// Workforce — Employee Attendance & Time Management (Isolated)
+// =====================================================
+
+enum EmployeeRole {
+  HOUSEKEEPING
+  RECEPTION
+  CHEF
+  WAITER
+  CASHIER
+  STORE_KEEPER
+  SECURITY
+  MANAGER
+  MAINTENANCE
+  OTHER
+}
+
+model Employee {
+  id String @id @default(uuid())
+
+  hotelId String
+  branchId String?
+
+  employeeCode String @unique
+
+  firstName String
+  lastName String
+
+  role EmployeeRole
+
+  phone String?
+
+  pinCode String
+
+  hireDate DateTime?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  attendanceRecords AttendanceRecord[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([isActive])
+}
+
+model WorkSchedule {
+  id String @id @default(uuid())
+
+  hotelId String
+
+  name String
+
+  startTime String
+  endTime String
+
+  graceMinutes Int @default(10)
+
+  createdAt DateTime @default(now())
+
+  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  HALF_DAY
+}
+
+model AttendanceRecord {
+  id String @id @default(uuid())
+
+  employeeId String
+
+  date DateTime
+
+  checkInAt DateTime?
+  checkOutAt DateTime?
+
+  workedMinutes Int @default(0)
+
+  lateMinutes Int @default(0)
+
+  overtimeMinutes Int @default(0)
+
+  status AttendanceStatus
+
+  notes String?
+
+  createdAt DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([date])
 }
 

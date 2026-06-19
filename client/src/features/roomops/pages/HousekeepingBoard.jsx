@@ -20,6 +20,7 @@ import {
   ChartWrapper,
   CHART_COLORS,
   KpiCard,
+  KpiGrid,
 } from "@/components/ui/erp";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,7 +33,15 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, Tooltip } from "recharts";
-import { Plus, Play, Check, Eye } from "lucide-react";
+import {
+  Plus,
+  Play,
+  Check,
+  Eye,
+  Clock,
+  ClipboardPenLine,
+  ShieldCheck,
+} from "lucide-react";
 
 export default function HousekeepingBoard() {
   const { data = [], isLoading } = useHousekeepingTasksQuery();
@@ -232,26 +241,34 @@ export default function HousekeepingBoard() {
       {/* Main Layout Container (Now vertically stacked using full width) */}
       <div className="mt-4 space-y-6">
         {/* 1. KPI Boxes in a horizontal row spanning full width */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <KpiGrid cols={3}>
           <KpiCard
-            label="Pending"
+            label="Pending tasks"
             value={counts.PENDING}
+            hint="Awaiting technician assignment"
+            icon={Clock}
             accent="amber"
             loading={isLoading}
           />
+
           <KpiCard
             label="In progress"
             value={counts.IN_PROGRESS}
+            hint="Active cleaning configurations"
+            icon={ClipboardPenLine}
             accent="cyan"
             loading={isLoading}
           />
+
           <KpiCard
             label="Verified"
             value={counts.VERIFIED}
+            hint="Inspected and ready for guests"
+            icon={ShieldCheck}
             accent="emerald"
             loading={isLoading}
           />
-        </div>
+        </KpiGrid>
 
         {/* 2. Data Table spanning full width */}
         <DataTable
