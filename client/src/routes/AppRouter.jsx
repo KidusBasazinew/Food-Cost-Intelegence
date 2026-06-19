@@ -26,6 +26,11 @@ import { ExecutiveFoodOpsDashboardPage } from "@/features/analytics/pages/Execut
 import { ReportsPage } from "@/features/analytics/pages/ReportsPage";
 import { LeakageReportPage } from "@/features/analytics/pages/LeakageReportPage";
 import { NotificationsPage } from "@/features/notifications/pages/NotificationsPage";
+import RoomsDashboard from "@/features/roomops/pages/RoomsDashboard";
+import ReservationsPage from "@/features/roomops/pages/ReservationsPage";
+import HousekeepingBoard from "@/features/roomops/pages/HousekeepingBoard";
+import CleanerMobileView from "@/features/roomops/pages/CleanerMobileView";
+import LateCheckoutMonitoring from "@/features/roomops/pages/LateCheckoutMonitoring";
 import ElitePOS from "@/pages/restaurant/components/ElitePOS";
 import { KitchenDisplayPage } from "@/pages/restaurant/KitchenDisplayPage";
 import { PosAnalyticsPage } from "@/pages/restaurant/PosAnalyticsPage";
@@ -92,6 +97,14 @@ export function AppRouter() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/reports/leakage" element={<LeakageReportPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/ops/rooms" element={<RoomsDashboard />} />
+            <Route path="/ops/reservations" element={<ReservationsPage />} />
+            <Route path="/ops/housekeeping" element={<HousekeepingBoard />} />
+            <Route path="/ops/cleaner" element={<CleanerMobileView />} />
+            <Route
+              path="/ops/late-checkout"
+              element={<LateCheckoutMonitoring />}
+            />
             <Route
               path="/employees"
               element={<PlaceholderPage title="Employees" />}

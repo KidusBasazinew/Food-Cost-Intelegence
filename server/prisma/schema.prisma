@@ -61,6 +61,9 @@ model Hotel {
   posOrders             PosOrder[]
   stockMovements        StockMovement[]
   stockCounts           StockCount[]
+  rooms                 Room[]
+  reservations          Reservation[]
+  housekeepingTasks     HousekeepingTask[]
 
   @@index([status])
   @@index([createdAt])
@@ -92,6 +95,9 @@ model Branch {
   posOrders             PosOrder[]
   stockMovements        StockMovement[]
   stockCounts           StockCount[]
+  rooms                 Room[]
+  reservations          Reservation[]
+  housekeepingTasks     HousekeepingTask[]
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -119,6 +125,7 @@ model User {
   inventoryTransactionsCreated InventoryTransaction[] @relation("InventoryTransactionCreatedBy")
   purchasesCreated              Purchase[]            @relation("PurchaseCreatedBy")
   notifications                 Notification[]
+  assignedHousekeepingTasks    HousekeepingTask[]
 
   @@index([hotelId])
   @@index([branchId])
@@ -792,3 +799,135 @@ model StockCountItem {
   @@index([stockCountId])
   @@index([inventoryItemId])
 }
+
+// =====================================================
+// Room Operations (Isolated Hotel Operations Module)
+// =====================================================
+
+enum RoomStatus {
+  VACANT
+  OCCUPIED
+  DIRTY
+  CLEANING
+  INSPECTING
+  READY
+  OUT_OF_SERVICE
+}
+
+enum ReservationStatus {
+  RESERVED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+enum HousekeepingStatus {
+  PENDING
+  IN_PROGRESS
+  CLEANED
+  VERIFIED
+}
+
+enum HousekeepingTaskKind {
+  CLEANING
+  MAINTENANCE
+  INSPECTION
+}
+
+model Room {
+  id        String     @id @default(uuid())
+  hotelId   String
+  branchId  String?
+
+  roomNumber String
+  floor      Int?
+
+  status    RoomStatus @default(VACANT)
+  isActive  Boolean    @default(true)
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  reservations        Reservation[]
+  housekeepingTasks   HousekeepingTask[]
+
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch  Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([hotelId, branchId, roomNumber])
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([status])
+}
+
+model Reservation {
+  id        String            @id @default(uuid())
+  hotelId   String
+  branchId  String?
+
+  roomId    String
+  room      Room              @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  guestName  String
+  guestPhone String?
+  guestEmail String?
+
+  status     ReservationStatus @default(RESERVED)
+
+  checkInAt  DateTime?
+  checkOutAt DateTime?
+  actualCheckOutAt DateTime?
+
+  lateCheckoutFeeCents Int     @default(0)
+
+  notes      String?
+
+  housekeepingTasks HousekeepingTask[]
+
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  hotel  Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([roomId])
+  @@index([status])
+}
+
+model HousekeepingTask {
+  id        String           @id @default(uuid())
+  hotelId   String
+  branchId  String?
+
+  roomId    String
+  room      Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  reservationId String?
+  reservation   Reservation?  @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+  kind      HousekeepingTaskKind @default(CLEANING)
+  status    HousekeepingStatus   @default(PENDING)
+
+  assignedUserId String?
+  assignedUser   User?             @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  checkedInAt DateTime?
+  completedAt DateTime?
+  verifiedAt  DateTime?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel  Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([roomId])
+  @@index([status])
+  @@index([kind])
+}
+

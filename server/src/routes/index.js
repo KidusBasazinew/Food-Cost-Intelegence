@@ -22,6 +22,7 @@ import { reportsRouter } from "./reports.routes.js";
 import { posRouter } from "./pos.routes.js";
 import { stockCountsRouter } from "./stockCounts.routes.js";
 import { leakageRouter } from "./leakage.routes.js";
+import { opsRouter } from "./ops.routes.js";
 // import { auditsRouter } from "./audits.routes.js";
 // import { varianceRouter } from "./variance.routes.js";
 // import { reconciliationRouter } from "./reconciliation.routes.js";
@@ -55,6 +56,9 @@ apiRouter.use("/reports", reportsRouter);
 // Stage 8 — Leakage & Variance Intelligence
 apiRouter.use("/inventory/stock-counts", stockCountsRouter);
 apiRouter.use("/leakage", leakageRouter);
+
+// Room Operations (isolated module)
+apiRouter.use("/ops", opsRouter);
 
 // Stage 7 — POS Orders + Kitchen
 apiRouter.use("/pos", posRouter);

@@ -15,6 +15,9 @@ import {
   Users,
   UtensilsCrossed,
   Zap,
+  House,
+  Clock,
+  Calendar,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -60,10 +63,16 @@ const navGroups = [
   },
   {
     label: "Organization",
+    items: [{ to: "/reports", label: "Reports", icon: Receipt }],
+  },
+  {
+    label: "House Keeping",
     items: [
-      { to: "/reports", label: "Reports", icon: Receipt },
-      { to: "/employees", label: "Employees", icon: Users },
-      { to: "/settings", label: "Settings", icon: Settings },
+      { to: "/ops/rooms", label: "Rooms", icon: House },
+      { to: "/ops/reservations", label: "Reservations", icon: Calendar },
+      { to: "/ops/late-checkout", label: "Late Checkout", icon: Clock },
+      { to: "/ops/housekeeping", label: "Housekeeping", icon: Infinity },
+      { to: "/ops/cleaner", label: "Cleaner", icon: Clock },
     ],
   },
 ];

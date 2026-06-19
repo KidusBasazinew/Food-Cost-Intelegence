@@ -42,6 +42,11 @@ const EnvSchema = z.object({
     .int()
     .min(0)
     .default(150000),
+  LATE_CHECKOUT_FEE_PER_HOUR_CENTS: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .default(1000),
 });
 
 export const env = EnvSchema.parse(process.env);
