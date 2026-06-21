@@ -14,14 +14,18 @@ export const createDraftOrder = asyncHandler(async (req, res) => {
 });
 
 export const sendToKitchen = asyncHandler(async (req, res) => {
-  const { hotelId, branchId, userId } = req.auth;
-  const result = await posService.createAndSendPosOrder({
-    hotelId,
-    branchId,
-    userId,
-    input: req.body,
-  });
-  created(res, "POS order sent to kitchen", result);
+  try {
+    const { hotelId, branchId, userId } = req.auth;
+    const result = await posService.createAndSendPosOrder({
+      hotelId,
+      branchId,
+      userId,
+      input: req.body,
+    });
+    created(res, "POS order sent to kitchen", result);
+  } catch (e) {
+    console.log(e);
+  }
 });
 
 export const updateStatus = asyncHandler(async (req, res) => {

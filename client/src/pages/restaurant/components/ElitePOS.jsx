@@ -1,27 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  MapPin,
   Bell,
-  Clock,
-  MoveUp,
-  Merge,
-  Scissors,
-  XCircle,
   Search,
   PlusCircle,
   ShoppingBag,
   Minus,
   Plus,
-  Edit,
   Trash2,
   Send,
-  Save,
-  SlidersHorizontal,
-  X,
-  ChevronDown,
-  PersonStanding,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { recipesApi } from "@/features/recipes/api/recipesApi";
 import { posService } from "@/services/pos.service";
@@ -51,89 +38,6 @@ function recipeCategoryToPosCategory(category) {
   }
 }
 
-function parseGuestCount(guestsText = "") {
-  const n = Number(String(guestsText).split(" ")[0]);
-  return Number.isFinite(n) && n > 0 ? n : 1;
-}
-
-function cartKey(tableNumber) {
-  return `pos_cart_v1_table_${tableNumber}`;
-}
-
-function metaKey(tableNumber) {
-  return `pos_meta_v1_table_${tableNumber}`;
-}
-
-function safeGetItem(key) {
-  try {
-    if (typeof window === "undefined") return null;
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function safeSetItem(key, value) {
-  try {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(key, value);
-  } catch {
-    // ignore
-  }
-}
-
-function safeRemoveItem(key) {
-  try {
-    if (typeof window === "undefined") return;
-    window.localStorage.removeItem(key);
-  } catch {
-    // ignore
-  }
-}
-
-function loadTableState(tableNumber) {
-  const activeTableDetails = initialTablesData[tableNumber] || {
-    guests: "0 Person",
-    waiter: "Unassigned",
-    status: "Vacant",
-    time: "--:--",
-  };
-
-  let cart = [];
-  let meta = null;
-
-  try {
-    const rawCart = safeGetItem(cartKey(tableNumber));
-    const parsedCart = rawCart ? JSON.parse(rawCart) : [];
-    cart = Array.isArray(parsedCart) ? parsedCart : [];
-  } catch {
-    cart = [];
-  }
-
-  try {
-    const rawMeta = safeGetItem(metaKey(tableNumber));
-    meta = rawMeta ? JSON.parse(rawMeta) : null;
-  } catch {
-    meta = null;
-  }
-
-  const fallbackWaiterName = activeTableDetails.waiter;
-  const fallbackCustomerCount = parseGuestCount(activeTableDetails.guests);
-
-  return {
-    cart,
-    orderId: meta?.orderId ?? null,
-    status: meta?.status ?? "DRAFT",
-    notes: meta?.notes ?? "",
-    waiterName: meta?.waiterName ?? fallbackWaiterName,
-    customerCount:
-      Number(meta?.customerCount) > 0
-        ? Number(meta.customerCount)
-        : fallbackCustomerCount,
-  };
-}
-
-// Static Data matching your initial structure
 const INITIAL_MEALS = [
   {
     id: "beef-steak",
@@ -153,7 +57,7 @@ const INITIAL_MEALS = [
     category: "Lunch",
     tag: "Best Seller",
     image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBfrYJAPeHisqgpFWEfSWApnEOxDTFnapgIt9-RY4esECayWr323HbN-lzndgQ6YzLDDjdCWnhe02u2e33RAmTED7UsyEhi7mU04ZXGm5bphWRnvpEm5M__CqZHFwb7qUmt0Q39h3chv-VtJahfvY4DSHZMc8-Z2X0fwe76_9MKAHj2_vu6tX4EQeIw49HoilLjkA5SfewIqflyd6FXG605J4QdnmrISPHy_RCn7fV4-U8EEh61N1HlwoO14Ck-e2QeAL1UM0wN3pc",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBfrYJAPeHisqgpFWApnEOxDTFnapgIt9-RY4esECayWr323HbN-lzndgQ6YzLDDjdCWnhe02u2e33RAmTED7UsyEhi7mU04ZXGm5bphWRnvpEm5M__CqZHFwb7qUmt0Q39h3chv-VtJahfvY4DSHZMc8-Z2X0fwe76_9MKAHj2_vu6tX4EQeIw49HoilLjkA5SfewIqflyd6FXG605J4QdnmrISPHy_RCn7fV4-U8EEh61N1HlwoO14Ck-e2QeAL1UM0wN3pc",
   },
   {
     id: "classic-burger",
@@ -183,121 +87,25 @@ const INITIAL_MEALS = [
     category: "Drinks",
     tag: null,
     image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBT_zCmwbkneZPvAXizrC0LGhDT1u_f9RAsFD8dWziiLbsAJMAq60CiqE_p6X0AiWJFJJQBvm6idG2aQZg-ESLYvkWdNpL2hfoaKRyiBbI2BOPSd1NwqN8hzvH9za3Rcb1kID6P0jlMjS4ZG2jp9zLEoV-rEw67y9_4iJjAaVlgZhiQ74jlGX4Kk45evmuO-CYkKzfy2GJeHPNwXUtcrVf0Ch8QhHRUgpXBcA0wVHwdVEx7cNeAtB4RbhELH-w5T6zEsPvOlEMY1rw",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBT_zCmwbkneZPvAXizrC0LGhDT1u_f9RAsFD8dWziiLbsAJMAq60CiqE_p6X0AiWJFJJQBvm6idG2aQZg-ESLYvkWdNpL2hfoaKRyiBbI2BOPSd1NwqN8hzvH9za3Rcb1kID6P0jlMjS4ZG2jp9zLEoV-rEw67y9_4iJjAaVlgZhiQ74jlGX4Kk45evmuO-CYkKzfy2GJeHsPb7T6zEsPvOlEMY1rw",
   },
 ];
 
-const tableNumber = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-const initialTablesData = {
-  1: {
-    guests: "4 Person",
-    waiter: "Selam",
-    status: "Ordering",
-    time: "12:45",
-  },
-  2: {
-    guests: "2 Person",
-    waiter: "Worku",
-    status: "Served",
-    time: "13:10",
-  },
-  3: {
-    guests: "6 Person",
-    waiter: "Saba",
-    status: "Check Requested",
-    time: "11:30",
-  },
-  4: {
-    guests: "0 Person",
-    waiter: "Unassigned",
-    status: "Vacant",
-    time: "--:--",
-  },
-  // Add as many tables as your restaurant layout needs...
-};
 export default function ElitePOS() {
-  //const [tables, setTables] = useState(initialTablesData);
-  const [currentTable, setCurrentTable] = useState(1);
-  const [isTableSelectorOpen, setIsTableSelectorOpen] = useState(false);
-
   const [menuMeals, setMenuMeals] = useState(INITIAL_MEALS);
   const [menuLoading, setMenuLoading] = useState(false);
-
-  // Extract the active table details dynamically
-  const activeTableDetails = initialTablesData[currentTable] || {
-    guests: "0 Person",
-    waiter: "Unassigned",
-    status: "Vacant",
-    time: "--:--",
-  };
-
-  const [waiterName, setWaiterName] = useState(
-    () => loadTableState(1).waiterName,
-  );
-
-  const waiterOptions = useMemo(() => {
-    const unique = new Set();
-
-    Object.values(initialTablesData).forEach((t) => {
-      const name = String(t?.waiter ?? "").trim();
-      if (name) unique.add(name);
-    });
-
-    const current = String(waiterName ?? "").trim();
-    if (current) unique.add(current);
-
-    const list = Array.from(unique);
-
-    // Keep Unassigned at the top if present, then sort the rest.
-    const unassignedIndex = list.findIndex(
-      (n) => n.toLowerCase() === "unassigned",
-    );
-    const unassigned =
-      unassignedIndex > -1 ? list.splice(unassignedIndex, 1)[0] : null;
-    list.sort((a, b) => a.localeCompare(b));
-
-    return unassigned ? [unassigned, ...list] : list;
-  }, [waiterName]);
-  const [customerCount, setCustomerCount] = useState(
-    () => loadTableState(1).customerCount,
-  );
-  const [orderNotes, setOrderNotes] = useState(() => loadTableState(1).notes);
-
-  const [activeOrderId, setActiveOrderId] = useState(
-    () => loadTableState(1).orderId,
-  );
-  const [activeOrderStatus, setActiveOrderStatus] = useState(
-    () => loadTableState(1).status,
-  );
-  const [saving, setSaving] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [completing, setCompleting] = useState(false);
 
   // Navigation & Filtering State
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Cart State
-  const [cart, setCart] = useState(() => loadTableState(1).cart);
+  const [cart, setCart] = useState([]);
 
-  // Modal/Customization Drawer State
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
-  useEffect(() => {
-    safeSetItem(cartKey(currentTable), JSON.stringify(cart));
-  }, [cart, currentTable]);
-
-  const handleSelectTable = (tableNumber) => {
-    const next = loadTableState(tableNumber);
-    setCurrentTable(tableNumber);
-    setCart(next.cart);
-    setActiveOrderId(next.orderId);
-    setActiveOrderStatus(next.status);
-    setOrderNotes(next.notes);
-    setWaiterName(next.waiterName);
-    setCustomerCount(next.customerCount);
-    setIsTableSelectorOpen(false);
-  };
+  // Order State
+  const [activeOrderId, setActiveOrderId] = useState(null);
+  const [activeOrderStatus, setActiveOrderStatus] = useState("DRAFT");
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -334,7 +142,7 @@ export default function ElitePOS() {
     };
   }, []);
 
-  // Computed Properties: Filter Meals
+  // Computed: Filter Meals
   const filteredMeals = useMemo(() => {
     return menuMeals.filter((meal) => {
       const matchesCategory =
@@ -346,7 +154,7 @@ export default function ElitePOS() {
     });
   }, [activeCategory, searchQuery, menuMeals]);
 
-  // Computed Properties: Cart Math Totals
+  // Computed: Cart Totals
   const totals = useMemo(() => {
     const subtotal = cart.reduce(
       (sum, item) => sum + item.price * item.quantity,
@@ -365,7 +173,7 @@ export default function ElitePOS() {
     };
   }, [cart]);
 
-  // Cart Operations Handlers
+  // Cart Handlers
   const handleAddToOrder = (meal) => {
     setCart((prevCart) => {
       const existingIndex = prevCart.findIndex(
@@ -373,7 +181,10 @@ export default function ElitePOS() {
       );
       if (existingIndex > -1) {
         const nextCart = [...prevCart];
-        nextCart[existingIndex].quantity += 1;
+        nextCart[existingIndex] = {
+          ...nextCart[existingIndex],
+          quantity: nextCart[existingIndex].quantity + 1,
+        };
         return nextCart;
       }
       return [
@@ -391,8 +202,8 @@ export default function ElitePOS() {
   };
 
   const handleUpdateQuantity = (id, amount) => {
-    setCart((prevCart) => {
-      return prevCart
+    setCart((prevCart) =>
+      prevCart
         .map((item) => {
           if (item.recipeId === id) {
             const nextQty = item.quantity + amount;
@@ -400,97 +211,19 @@ export default function ElitePOS() {
           }
           return item;
         })
-        .filter((item) => item.quantity > 0);
-    });
+        .filter((item) => item.quantity > 0),
+    );
   };
 
   const handleRemoveItem = (id) => {
     setCart((prevCart) => prevCart.filter((item) => item.recipeId !== id));
   };
 
-  const handleClearOrder = () => {
-    if (window.confirm("Are you sure you want to cancel the current order?")) {
-      (async () => {
-        try {
-          if (activeOrderId) {
-            await posService.updateStatus(activeOrderId, "CANCELLED");
-          }
-        } catch (err) {
-          toast.error(err?.message || "Failed to cancel order");
-          return;
-        }
-
-        setCart([]);
-        setActiveOrderId(null);
-        setActiveOrderStatus("DRAFT");
-        setOrderNotes("");
-        safeRemoveItem(metaKey(currentTable));
-        toast.success("Order cancelled");
-      })();
-    }
-  };
-
-  async function persistMeta(next) {
-    safeSetItem(metaKey(currentTable), JSON.stringify(next));
-  }
-
-  async function handleSaveDraft() {
-    if (cart.length === 0) return;
-    setSaving(true);
-    try {
-      const input = {
-        tableNumber: currentTable,
-        waiterName,
-        customerCount,
-        notes: orderNotes,
-        items: cart.map((c) => ({
-          recipeId: c.recipeId,
-          quantity: c.quantity,
-          notes: c.notes,
-        })),
-      };
-
-      let result;
-      if (!activeOrderId) {
-        result = await posService.createDraftOrder(input);
-        setActiveOrderId(result.id);
-        setActiveOrderStatus(result.status);
-        await persistMeta({
-          orderId: result.id,
-          status: result.status,
-          waiterName,
-          customerCount,
-          notes: orderNotes,
-        });
-      } else {
-        const edited = await posService.updateOrder(activeOrderId, input);
-        setActiveOrderStatus(edited?.order?.status ?? activeOrderStatus);
-        await persistMeta({
-          orderId: activeOrderId,
-          status: edited?.order?.status ?? activeOrderStatus,
-          waiterName,
-          customerCount,
-          notes: orderNotes,
-        });
-      }
-
-      toast.success("Draft saved");
-    } catch (err) {
-      toast.error(err?.message || "Failed to save draft");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function handleSendToKitchen() {
     if (cart.length === 0) return;
     setSending(true);
     try {
       const input = {
-        tableNumber: currentTable,
-        waiterName,
-        customerCount,
-        notes: orderNotes,
         items: cart.map((c) => ({
           recipeId: c.recipeId,
           quantity: c.quantity,
@@ -503,44 +236,24 @@ export default function ElitePOS() {
         const order = res?.order;
         setActiveOrderId(order?.id ?? null);
         setActiveOrderStatus(order?.status ?? "SENT_TO_KITCHEN");
-        await persistMeta({
-          orderId: order?.id,
-          status: order?.status ?? "SENT_TO_KITCHEN",
-          waiterName,
-          customerCount,
-          notes: orderNotes,
-        });
       } else {
         await posService.updateOrder(activeOrderId, input);
-
         if (activeOrderStatus === "DRAFT") {
           const res = await posService.updateStatus(
             activeOrderId,
             "SENT_TO_KITCHEN",
           );
-          const nextStatus = res?.order?.status ?? "SENT_TO_KITCHEN";
-          setActiveOrderStatus(nextStatus);
-          await persistMeta({
-            orderId: activeOrderId,
-            status: nextStatus,
-            waiterName,
-            customerCount,
-            notes: orderNotes,
-          });
+          setActiveOrderStatus(res?.order?.status ?? "SENT_TO_KITCHEN");
         } else {
-          await persistMeta({
-            orderId: activeOrderId,
-            status: activeOrderStatus,
-            waiterName,
-            customerCount,
-            notes: orderNotes,
-          });
-          toast.success("Order updated (inventory adjusted)");
+          toast.success("Order updated");
           return;
         }
       }
 
-      toast.success("Sent to kitchen (inventory consumed)");
+      toast.success("Sent to kitchen!");
+      setCart([]);
+      setActiveOrderId(null);
+      setActiveOrderStatus("DRAFT");
     } catch (err) {
       const shortage = err?.data?.details?.shortages?.[0];
       if (shortage) {
@@ -555,263 +268,32 @@ export default function ElitePOS() {
     }
   }
 
-  async function handleCompletePayment() {
-    if (!activeOrderId) return;
-    setCompleting(true);
-    try {
-      const res = await posService.updateStatus(activeOrderId, "COMPLETED");
-      const nextStatus = res?.order?.status ?? "COMPLETED";
-      toast.success("Payment completed");
-      setActiveOrderStatus(nextStatus);
-      setCart([]);
-      setActiveOrderId(null);
-      setOrderNotes("");
-      safeRemoveItem(metaKey(currentTable));
-    } catch (err) {
-      toast.error(err?.message || "Failed to complete payment");
-    } finally {
-      setCompleting(false);
-    }
-  }
-
   return (
-    <div className="bg-background text-on-surface font-body-md overflow-hidden h-screen w-screen flex flex-col">
-      {/* Top Navigation Shell */}
-      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-12 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm">
-        <div className="flex items-center gap-4">
-          <span className="font-headline-md text-xl font-900 tracking-tight text-primary">
-            ELITE POS
-          </span>
-          <div className="h-6 w-px bg-outline-variant/50 mx-2"></div>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-primary" />
-            <span className="font-label-lg text-sm font-semibold text-on-surface">
-              Floor 1 - Station 4
-            </span>
+    <div className="bg-background text-on-surface font-body-md overflow-hidden h-full w-full flex flex-col">
+      {/* Top Navigation Bar: Changed from fixed layout to standard layout wrapper flow */}
+      <header className="w-full flex-shrink-0 flex justify-between items-center px-6 h-12 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm">
+        <span className="font-headline-md text-xl font-900 tracking-tight text-primary">
+          ELITE POS
+        </span>
+        <div className="relative cursor-pointer group">
+          <div className="p-2 rounded-full hover:bg-surface-container-high transition-colors">
+            <Bell className="w-5 h-5 text-on-surface-variant" />
           </div>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="relative cursor-pointer group">
-            <div className="p-2 rounded-full hover:bg-surface-container-high transition-colors">
-              <Bell className="w-5 h-5 text-on-surface-variant" />
-            </div>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
-          </div>
-          <div className="flex items-center gap-3 bg-surface-container-low px-3 py-1.5 rounded-full">
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-primary/20"></div>
-            <span className="font-label-lg text-sm font-semibold">
-              {waiterName}
-            </span>
-          </div>
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
         </div>
       </header>
 
-      {/* Main 3-Panel Layout */}
-      <main className="flex-1 flex pt-12 overflow-hidden">
-        {/* Left Panel: Table Context */}
-        <aside className="w-[22%] bg-surface-container-low border-r border-outline-variant/20 flex flex-col p-6 gap-8 overflow-y-auto custom-scrollbar">
-          {/* Left Panel Header & Context */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between relative">
-              {/* Table Selector Trigger Button */}
-              <button
-                onClick={() => setIsTableSelectorOpen(!isTableSelectorOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 -ml-3 rounded-lg hover:bg-surface-container-high transition-colors group"
-              >
-                <h2 className="font-headline-sm text-lg font-semibold text-primary">
-                  Table {currentTable}
-                </h2>
-                <ChevronDown
-                  className={`w-4 h-4 text-primary transition-transform duration-200 ${isTableSelectorOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {/* Floating Table Selector Dropdown */}
-              {isTableSelectorOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsTableSelectorOpen(false)}
-                  />
-                  <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-outline-variant/30 rounded-2xl shadow-2xl p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <p className="text-xs font-semibold text-on-surface-variant mb-3 px-1 uppercase tracking-wider">
-                      Switch Table
-                    </p>
-                    <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto custom-scrollbar p-0.5">
-                      {tableNumber.map((number) => {
-                        const isSelected = currentTable === number;
-                        const hasOrder =
-                          initialTablesData[number]?.status !== "Vacant";
-
-                        return (
-                          <button
-                            key={number}
-                            className={`rounded-lg py-2.5 text-sm font-medium border transition-all relative ${
-                              isSelected
-                                ? "bg-primary text-white border-primary shadow-sm shadow-primary/20"
-                                : "border-outline-variant/10 hover:bg-surface-container-high text-on-surface bg-surface-container-lowest"
-                            }`}
-                            onClick={() => {
-                              handleSelectTable(number);
-                            }}
-                          >
-                            {number}
-                            {/* Small dynamic dot indicator showing if a table is occupied/active */}
-                            {!isSelected && hasOrder && (
-                              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Dynamic Time Display */}
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary rounded-full">
-                <Clock className="w-4 h-4" />
-                <span className="font-label-md text-xs font-medium">
-                  {activeTableDetails.time}
-                </span>
-              </div>
-            </div>
-
-            {/* Dynamic Table Context Card */}
-            <div className="space-y-3 bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-outline-variant/10">
-              <div className="flex justify-between items-center">
-                <span className="text-on-surface-variant/70 font-medium text-sm">
-                  Guests
-                </span>
-                <span className="font-semibold text-on-surface text-sm">
-                  {activeTableDetails.guests}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-on-surface-variant/70 font-medium text-sm">
-                  Waiter
-                </span>
-                <span className="font-semibold text-on-surface text-sm">
-                  {activeTableDetails.waiter}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-on-surface-variant/70 font-medium text-sm">
-                  Status
-                </span>
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    activeTableDetails.status === "Ordering"
-                      ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
-                      : activeTableDetails.status === "Served"
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400"
-                        : activeTableDetails.status === "Check Requested"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400"
-                          : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                  }`}
-                >
-                  {activeTableDetails.status}
-                </span>
-              </div>
-            </div>
-
-            {/* Order Details (POS Payload) */}
-            <div className="space-y-3 bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-outline-variant/10">
-              <div className="space-y-1">
-                <label className="text-on-surface-variant/70 font-medium text-xs">
-                  Waiter
-                </label>
-                <select
-                  value={waiterName}
-                  onChange={(e) => setWaiterName(e.target.value)}
-                  className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant/20 rounded-xl focus:ring-2 focus:ring-primary/20 text-sm"
-                >
-                  {waiterOptions.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-on-surface-variant/70 font-medium text-xs">
-                  Customer count
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  value={customerCount}
-                  onChange={(e) => setCustomerCount(Number(e.target.value))}
-                  className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant/20 rounded-xl focus:ring-2 focus:ring-primary/20 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-on-surface-variant/70 font-medium text-xs">
-                  Order notes
-                </label>
-                <textarea
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  className="w-full min-h-20 px-3 py-2 bg-surface-container-low border border-outline-variant/20 rounded-xl focus:ring-2 focus:ring-primary/20 text-sm"
-                  placeholder="Allergies, rush, special instructions…"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions Panel */}
-          <div className="space-y-4">
-            <h3 className="font-label-lg text-sm font-semibold text-on-surface-variant px-1">
-              Quick Actions
-            </h3>
-            <div className="grid grid-cols-1 gap-3">
-              <button className="flex items-center gap-4 px-4 py-3 bg-surface-container-lowest border border-outline-variant/30 rounded-xl hover:bg-surface-container-high transition-all active:scale-95 group">
-                <MoveUp className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="font-label-lg text-sm font-semibold">
-                  Transfer
-                </span>
-              </button>
-              <button className="flex items-center gap-4 px-4 py-3 bg-surface-container-lowest border border-outline-variant/30 rounded-xl hover:bg-surface-container-high transition-all active:scale-95 group">
-                <Merge className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="font-label-lg text-sm font-semibold">
-                  Merge
-                </span>
-              </button>
-              <button className="flex items-center gap-4 px-4 py-3 bg-surface-container-lowest border border-outline-variant/30 rounded-xl hover:bg-surface-container-high transition-all active:scale-95 group">
-                <Scissors className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="font-label-lg text-sm font-semibold">
-                  Split Bill
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Bottom Action */}
-          <div className="mt-auto pt-6 border-t border-outline-variant/20">
-            <Button
-              variant="destructive"
-              onClick={handleClearOrder}
-              className="w-full flex items-center justify-center gap-2 py-3 text-white font-label-lg text-sm font-semibold hover:bg-error/5 rounded-xl transition-colors"
-            >
-              <XCircle className="w-5 h-5" />
-              Cancel Order
-            </Button>
-          </div>
-        </aside>
-
-        {/* Center Panel: Menu Browser */}
+      {/* Main 2-Panel Layout: Cleared absolute top padding to stack cleanly beneath header */}
+      <main className="flex-1 flex overflow-hidden">
+        {/* Left/Center Panel: Menu Browser */}
         <section className="flex-1 bg-surface flex flex-col overflow-hidden">
-          {/* Search and Filter Header */}
-          <div className="p-6 space-y-6">
+          {/* Search and Category Filter */}
+          <div className="p-6 space-y-6 flex-shrink-0">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant w-5 h-5" />
               <input
                 className="w-full h-12 pl-12 pr-4 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 font-body-md text-on-surface"
-                placeholder="Search meals..."
+                placeholder="Search recipes..."
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -836,7 +318,7 @@ export default function ElitePOS() {
             </div>
           </div>
 
-          {/* Grid of Meal Cards */}
+          {/* Recipe Grid */}
           <div className="flex-1 overflow-y-auto px-6 pb-24 custom-scrollbar">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {menuLoading ? (
@@ -845,7 +327,7 @@ export default function ElitePOS() {
                 </div>
               ) : filteredMeals.length === 0 ? (
                 <div className="col-span-full text-center text-on-surface-variant py-10">
-                  No meals found.
+                  No recipes found.
                 </div>
               ) : (
                 filteredMeals.map((meal) => (
@@ -895,9 +377,10 @@ export default function ElitePOS() {
           </div>
         </section>
 
-        {/* Right Panel: Live Order Cart */}
-        <aside className="w-[30%] bg-surface-container-lowest border-l border-outline-variant/20 flex flex-col shadow-2xl z-20">
-          <div className="p-6 border-b border-outline-variant/20 flex items-center justify-between">
+        {/* Right Panel: Cart */}
+        <aside className="w-[30%] min-w-[320px] bg-surface-container-lowest border-l border-outline-variant/20 flex flex-col shadow-2xl z-20 overflow-hidden">
+          {/* Cart Header */}
+          <div className="p-6 border-b border-outline-variant/20 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <ShoppingBag className="w-5 h-5 text-primary" />
               <h2 className="font-headline-sm text-lg font-semibold">
@@ -914,7 +397,7 @@ export default function ElitePOS() {
             </span>
           </div>
 
-          {/* Order List */}
+          {/* Cart Items */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
             {cart.map((item) => (
               <div
@@ -927,10 +410,7 @@ export default function ElitePOS() {
                       {item.quantity}x
                     </div>
                     <img
-                      src={
-                        item.image ||
-                        "https://lh3.googleusercontent.com/aida-public/AB6AXuAZrjSx462fjkzouToRG0nSQGlKj879LqFBq3nPqllBKQKYwTSMu-9iHMDqjJ2iM66KnronAa20S-mlU28BqqtVFZLb4EvHvKwdMGWNAb6mQqv4BQSjUM-FtJ1_lqe1ndwe01fpoW_T04AXF4FbmCwro-8NUZdHN1OAB-t2a_daqgjYXdT2ZTlNQQUHuu4dqaz7ECd-LG4dqWDsyvNeYDITrDq2KQLqW3ZFdvaGaDvQCOOL_BPdQ7KXv0sVUum2uirqVBpilOl4rs4"
-                      }
+                      src={item.image}
                       alt={item.name}
                       className="w-16 h-16 object-cover rounded-lg"
                     />
@@ -965,35 +445,25 @@ export default function ElitePOS() {
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setIsDrawerOpen(true)}
-                      className="p-1.5 hover:bg-surface-container-highest rounded-lg transition-colors flex items-center justify-center"
-                      title="Edit customizations"
-                    >
-                      <Edit className="w-5 h-5 text-blue-500" />
-                    </button>
-                    <button
-                      onClick={() => handleRemoveItem(item.recipeId)}
-                      className="p-1.5 hover:bg-surface-container-highest rounded-lg transition-colors text-error flex items-center justify-center"
-                      title="Remove variant"
-                    >
-                      <Trash2 className="text-red-600 w-5 h-5" />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleRemoveItem(item.recipeId)}
+                    className="p-1.5 hover:bg-surface-container-highest rounded-lg transition-colors text-error flex items-center justify-center"
+                    title="Remove item"
+                  >
+                    <Trash2 className="text-red-600 w-5 h-5" />
+                  </button>
                 </div>
               </div>
             ))}
             {cart.length === 0 && (
               <div className="text-center py-16 text-on-surface-variant text-sm">
-                The basket is currently empty. Tap items to construct a
-                breakdown.
+                Select recipes to add them to the order.
               </div>
             )}
           </div>
 
-          {/* Totals and Checkout */}
-          <div className="p-6 bg-surface-container-low/50 border-t border-outline-variant/30 space-y-6">
+          {/* Totals & Send */}
+          <div className="p-6 bg-surface-container-low/50 border-t border-outline-variant/30 space-y-6 flex-shrink-0">
             <div className="space-y-3">
               <div className="flex justify-between text-on-surface-variant font-label-lg text-sm">
                 <span>Subtotal</span>
@@ -1017,81 +487,17 @@ export default function ElitePOS() {
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                onClick={handleSendToKitchen}
-                disabled={cart.length === 0}
-                className="w-full h-14 bg-primary disabled:opacity-50 text-white rounded-2xl font-label-lg text-sm font-semibold shadow-lg shadow-primary/20 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
-              >
-                <Send className="w-5 h-5" />
-                {sending ? "Sending…" : "Send To Kitchen"}
-              </button>
-              <button
-                onClick={handleSaveDraft}
-                disabled={cart.length === 0}
-                className="w-full h-14 bg-surface-container-highest disabled:opacity-50 text-on-surface-variant rounded-2xl font-label-lg text-sm font-semibold active:scale-[0.97] transition-all flex items-center justify-center gap-2"
-              >
-                <Save className="w-5 h-5" />
-                {saving ? "Saving…" : "Save Draft"}
-              </button>
-
-              <button
-                onClick={handleCompletePayment}
-                disabled={!activeOrderId || completing}
-                className="w-full h-14 bg-emerald-600 disabled:opacity-50 text-white rounded-2xl font-label-lg text-sm font-semibold shadow-lg active:scale-[0.97] transition-all flex items-center justify-center gap-2"
-              >
-                <span className="font-semibold">
-                  {completing ? "Completing…" : "Complete Payment"}
-                </span>
-              </button>
-            </div>
+            <button
+              onClick={handleSendToKitchen}
+              disabled={cart.length === 0 || sending}
+              className="w-full h-14 bg-primary disabled:opacity-50 text-white rounded-2xl font-label-lg text-sm font-semibold shadow-lg shadow-primary/20 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+            >
+              <Send className="w-5 h-5" />
+              {sending ? "Sending…" : "Send To Kitchen"}
+            </button>
           </div>
         </aside>
       </main>
-
-      {/* Customization Drawer Trigger Pill */}
-      {/* <div
-        onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-surface-container-highest/60 backdrop-blur-md px-6 py-3 rounded-full border border-white/40 shadow-xl cursor-pointer hover:bg-surface-container-high transition-all z-40"
-      >
-        <SlidersHorizontal className="w-4 h-4 text-primary" />
-        <span className="font-label-md text-xs font-medium text-on-surface">
-          {isDrawerOpen
-            ? "Close customization matrix panel"
-            : "Tap to customize selected item"}
-        </span>
-      </div> */}
-
-      {/* Optional Customization Drawer Overlay
-      {isDrawerOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex justify-end animate-fadeIn">
-          <div className="w-96 bg-surface-container-lowest h-full p-6 shadow-2xl flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-headline-sm text-lg font-semibold">
-                  Modifier Customization
-                </h3>
-                <button
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="cursor-pointer p-1 hover:bg-surface-container-high rounded-full transition-colors flex items-center justify-center"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <p className="text-sm text-on-surface-variant mb-4">
-                Select custom preparation modifiers for the selected recipe
-                items.
-              </p>
-            </div>
-            <button
-              onClick={() => setIsDrawerOpen(false)}
-              className="w-full py-3 bg-primary text-white rounded-xl font-semibold text-sm shadow-md active:scale-98 transition-transform"
-            >
-              Apply Modifications
-            </button>
-          </div>
-        </div>
-      )} */}
     </div>
   );
 }

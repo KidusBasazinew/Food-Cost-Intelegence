@@ -48,10 +48,6 @@ export function AppRouter() {
         <Route path="/login" element={<LoginPage />} />
 
         <Route element={<RequireAuth />}>
-          <Route path="/pos" element={<ElitePOS />} />
-        </Route>
-
-        <Route element={<RequireAuth />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<DashboardHomePage />} />
             <Route
@@ -127,13 +123,12 @@ export function AppRouter() {
             />
 
             <Route path="/kitchen" element={<KitchenDisplayPage />} />
-            <Route
-              path="/pos"
-              element={<Navigate to="/pos/orders" replace />}
-            />
-            <Route path="/pos/orders" element={<PosOrderHistoryPage />} />
-            <Route path="/pos/analytics" element={<PosAnalyticsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route element={<RequireAuth />}>
+              <Route path="/pos" element={<ElitePOS />} />
+              <Route path="/orders" element={<PosOrderHistoryPage />} />
+              <Route path="/analytics" element={<PosAnalyticsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
           </Route>
         </Route>
 

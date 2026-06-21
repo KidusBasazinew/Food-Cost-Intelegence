@@ -87,30 +87,17 @@ export async function createDraftPosOrder({
   // If a transaction client is provided (internal calls), reuse it.
   // Otherwise create a transaction (external API calls).
   const run = async (tx) => {
-    const tableNumber = assertInt(
-      Number(input.tableNumber),
-      "INVALID_TABLE",
-      "Invalid tableNumber",
-    );
+    const tableNumber = Number.isInteger(Number(input.tableNumber))
+      ? Number(input.tableNumber)
+      : 0;
 
-    const waiterName = String(input.waiterName ?? "").trim();
-    if (!waiterName) {
-      throw new ApiError(400, "INVALID_WAITER", "waiterName is required");
-    }
+    const waiterName = String(input.waiterName ?? "POS").trim();
 
     const customerCountRaw = Number(input.customerCount ?? 1);
-    const customerCount = assertInt(
-      customerCountRaw,
-      "INVALID_CUSTOMER_COUNT",
-      "Invalid customerCount",
-    );
-    if (customerCount <= 0) {
-      throw new ApiError(
-        400,
-        "INVALID_CUSTOMER_COUNT",
-        "customerCount must be > 0",
-      );
-    }
+    const customerCount =
+      Number.isInteger(customerCountRaw) && customerCountRaw > 0
+        ? customerCountRaw
+        : 1;
 
     const items = normalizeItems(input.items);
     const recipeIds = Array.from(new Set(items.map((i) => i.recipeId)));
@@ -381,21 +368,16 @@ export async function updatePosOrder({
     }
 
     const waiterName = String(
-      input.waiterName ?? order.waiterName ?? "",
+      input.waiterName ?? order.waiterName ?? "POS",
     ).trim();
-    if (!waiterName)
-      throw new ApiError(400, "INVALID_WAITER", "waiterName is required");
 
     const customerCountRaw = Number(
       input.customerCount ?? order.customerCount ?? 1,
     );
-    if (!Number.isInteger(customerCountRaw) || customerCountRaw <= 0) {
-      throw new ApiError(
-        400,
-        "INVALID_CUSTOMER_COUNT",
-        "customerCount must be a positive integer",
-      );
-    }
+    const customerCount =
+      Number.isInteger(customerCountRaw) && customerCountRaw > 0
+        ? customerCountRaw
+        : 1;
 
     const items = normalizeItems(input.items);
     const recipeIds = Array.from(new Set(items.map((i) => i.recipeId)));

@@ -18,27 +18,26 @@ const posOrderItemInput = z.object({
 
 export const createPosOrderSchema = {
   body: z.object({
-    tableNumber: z.coerce.number().int().positive(),
-    waiterName: z.string().min(1).max(100),
+    tableNumber: z.coerce.number().int().positive().optional(),
+    waiterName: z.string().min(1).max(100).optional(),
     customerCount: z.coerce.number().int().positive().default(1),
     notes: z.string().max(1000).optional(),
     items: z.array(posOrderItemInput).min(1),
   }),
-};
-
-export const updatePosOrderStatusSchema = {
-  params: z.object({ id: z.string().min(1) }),
-  body: z.object({ status: PosOrderStatus }),
 };
 
 export const updatePosOrderSchema = {
   params: z.object({ id: z.string().min(1) }),
   body: z.object({
-    waiterName: z.string().min(1).max(100),
+    waiterName: z.string().min(1).max(100).optional(),
     customerCount: z.coerce.number().int().positive().default(1),
     notes: z.string().max(1000).optional(),
     items: z.array(posOrderItemInput).min(1),
   }),
+};
+export const updatePosOrderStatusSchema = {
+  params: z.object({ id: z.string().min(1) }),
+  body: z.object({ status: PosOrderStatus }),
 };
 
 export const getPosOrderSchema = {

@@ -16,6 +16,7 @@ export const posService = {
     return http.post("/pos/orders/draft", input).then(unwrap);
   },
   sendToKitchen(input) {
+    console.log(input);
     return http.post("/pos/orders/send-to-kitchen", input).then(unwrap);
   },
   updateStatus(orderId, status) {
