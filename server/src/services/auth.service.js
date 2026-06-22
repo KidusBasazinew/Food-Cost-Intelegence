@@ -219,7 +219,45 @@ export async function register({ hotel, user }) {
 
   return result;
 }
+export async function createStaffUser({ hotelId, branchId, staffData }) {
+  const email = staffData.email.toLowerCase();
 
+  // 1. Check if user already exists
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    throw new ApiError(409, "CONFLICT", "Email already registered");
+  }
+
+  // 2. Hash the staff member's temporary password
+  const passwordHash = await hashPassword(staffData.password);
+
+  // 3. Create user attached to the existing hotel and branch
+  const createdUser = await prisma.user.create({
+    data: {
+      hotelId, // Linked to existing hotel
+      branchId: branchId || null, // Linked to existing branch (if applicable)
+      firstName: staffData.firstName,
+      lastName: staffData.lastName,
+      email,
+      passwordHash,
+      role: staffData.role, // Dynamically assigns role (e.g., "WAITER", "CASHIER")
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      branchId: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  return createdUser;
+}
 export async function login({ email, password, ipAddress, userAgent }) {
   const normalizedEmail = email.toLowerCase();
 

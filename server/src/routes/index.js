@@ -25,6 +25,7 @@ import { stockCountsRouter } from "./stockCounts.routes.js";
 import { leakageRouter } from "./leakage.routes.js";
 import { opsRouter } from "./ops.routes.js";
 import { workforceRouter } from "./workforce.routes.js";
+import { attendanceRouter } from "./attendance.routes.js";
 // import { auditsRouter } from "./audits.routes.js";
 // import { varianceRouter } from "./variance.routes.js";
 // import { reconciliationRouter } from "./reconciliation.routes.js";
@@ -65,6 +66,7 @@ apiRouter.use("/ops", opsRouter);
 
 // Workforce / Attendance module
 apiRouter.use("/workforce", workforceRouter);
+apiRouter.use("/attendance", attendanceRouter);
 
 // Stage 7 — POS Orders + Kitchen
 apiRouter.use("/pos", posRouter);

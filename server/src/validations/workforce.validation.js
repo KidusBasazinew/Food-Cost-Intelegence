@@ -64,3 +64,22 @@ export const resetPinSchema = {
   params: z.object({ id: z.string().uuid() }),
   body: z.object({ newPin: z.string().min(3) }),
 };
+
+export const createScheduleSchema = {
+  body: z.object({
+    name: z.string().min(1),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/),
+    graceMinutes: z.number().int().min(0).max(120).optional(),
+  }),
+};
+
+export const updateScheduleSchema = {
+  params: z.object({ id: z.string().uuid() }),
+  body: z.object({
+    name: z.string().min(1).optional(),
+    startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    graceMinutes: z.number().int().min(0).max(120).optional(),
+  }),
+};

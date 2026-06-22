@@ -3,16 +3,35 @@ import { usePinMutation } from "@/features/workforce/hooks/useWorkforce";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { PageShell, PageHeader } from "@/components/ui/erp";
 import { Button } from "@/components/ui/button";
+import { CheckCircle2 } from "lucide-react";
 
-function PadButton({ value, onClick }) {
+function PadButton({ value, onClick, disabled }) {
+  const label =
+    value === "del" ? "⌫" : value === "ok" ? "OK" : String(value);
   return (
     <button
+      type="button"
+      disabled={disabled}
       onClick={() => onClick(value)}
-      className="m-1 h-16 w-16 rounded-lg border bg-card text-xl font-semibold"
+      className="m-1 h-20 w-20 rounded-xl border bg-card text-2xl font-semibold shadow-sm transition hover:bg-muted disabled:opacity-50 md:h-24 md:w-24"
     >
-      {value}
+      {label}
     </button>
   );
+}
+
+function formatTime(d) {
+  if (!d) return "";
+  return new Date(d).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatWorked(minutes) {
+  const h = Math.floor((minutes ?? 0) / 60);
+  const m = (minutes ?? 0) % 60;
+  return `${h}h ${m}m`;
 }
 
 export default function AttendanceTerminal() {
@@ -21,79 +40,112 @@ export default function AttendanceTerminal() {
   const branchId = user?.branch?.id;
 
   const [pin, setPin] = useState("");
-  const [message, setMessage] = useState(null);
+  const [overlay, setOverlay] = useState(null);
 
   const pinMutation = usePinMutation();
 
   useEffect(() => {
-    if (pinMutation.isSuccess) {
-      const d = pinMutation.data;
-      setMessage({ ok: true, text: d.message || "Success", details: d.data });
-      setPin("");
-      const t = setTimeout(() => setMessage(null), 3000);
-      return () => clearTimeout(t);
-    }
-    if (pinMutation.isError) {
-      setMessage({
-        ok: false,
-        text: pinMutation.error?.response?.data?.message || "Error",
-      });
-    }
-  }, [pinMutation.isSuccess, pinMutation.isError]);
+    if (!pinMutation.isSuccess) return;
+    const d = pinMutation.data;
+    const emp = d?.data?.employee;
+    const isCheckout = d?.message === "Checked Out";
+
+    setOverlay({
+      isCheckout,
+      name: emp ? `${emp.firstName} ${emp.lastName}` : "",
+      role: emp?.role,
+      time: isCheckout
+        ? formatTime(d?.data?.checkOutAt)
+        : formatTime(d?.data?.checkInAt),
+      worked: isCheckout ? formatWorked(d?.data?.workedMinutes) : null,
+    });
+    setPin("");
+
+    const t = setTimeout(() => {
+      setOverlay(null);
+      pinMutation.reset();
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [pinMutation.isSuccess]);
 
   function onPress(d) {
+    if (pinMutation.isPending) return;
     if (d === "del") return setPin((p) => p.slice(0, -1));
     if (d === "ok") return submit();
     setPin((p) => (p.length >= 8 ? p : p + String(d)));
   }
 
   function submit() {
-    if (!hotelId)
-      return setMessage({ ok: false, text: "Missing hotel context" });
+    if (!pin || pin.length < 3) return;
+    if (!hotelId) return;
     pinMutation.mutate({ hotelId, branchId, pin });
   }
 
+  const busy = pinMutation.isPending;
+
   return (
-    <PageShell>
-      <PageHeader title="Attendance" subtitle="Enter PIN to check in/out" />
+    <PageShell className="relative">
+      <PageHeader title="ATTENDANCE" subtitle="Enter PIN to check in or out" />
 
-      <div className="mx-auto mt-6 max-w-md rounded-xl border bg-muted/10 p-6 text-center">
-        <div className="mb-4">
-          <input
-            value={"●".repeat(pin.length)}
-            readOnly
-            className="mb-3 w-full rounded-md border bg-white/80 p-3 text-center text-2xl font-mono"
-          />
-          {message ? (
-            <div
-              className={`p-3 text-sm ${message.ok ? "text-emerald-700" : "text-rose-700"}`}
-            >
-              <div className="font-semibold">{message.text}</div>
-              {message.details?.employee ? (
-                <div className="text-xs">
-                  {message.details.employee.firstName}{" "}
-                  {message.details.employee.lastName}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+      <div className="mx-auto mt-4 max-w-lg rounded-2xl border bg-muted/10 p-8 text-center shadow-sm">
+        <div
+          className="mb-6 rounded-xl border bg-background p-4 text-3xl font-mono tracking-[0.5em]"
+          aria-label="PIN entry"
+        >
+          {pin.length > 0 ? "●".repeat(pin.length) : "—"}
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        {pinMutation.isError && (
+          <div className="mb-4 text-sm text-rose-700">
+            {pinMutation.error?.response?.data?.message || "Invalid PIN"}
+          </div>
+        )}
+
+        <div className="flex flex-wrap justify-center">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-            <PadButton key={n} value={n} onClick={onPress} />
+            <PadButton key={n} value={n} onClick={onPress} disabled={busy} />
           ))}
-          <PadButton value={"del"} onClick={onPress} />
-          <PadButton value={0} onClick={onPress} />
-          <PadButton value={"ok"} onClick={onPress} />
+          <PadButton value="del" onClick={onPress} disabled={busy} />
+          <PadButton value={0} onClick={onPress} disabled={busy} />
+          <PadButton value="ok" onClick={onPress} disabled={busy} />
         </div>
 
-        <div className="mt-4">
-          <Button onClick={submit} className="w-full">
-            Check In / Out
+        <div className="mt-6">
+          <Button
+            onClick={submit}
+            disabled={busy || pin.length < 3}
+            className="w-full rounded-xl py-6 text-lg"
+            size="lg"
+          >
+            {busy ? "Processing…" : "Check In / Out"}
           </Button>
         </div>
       </div>
+
+      {overlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-card p-8 text-center shadow-xl">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
+            <h2 className="mt-4 text-2xl font-bold">
+              {overlay.isCheckout ? "Goodbye" : "Welcome"} {overlay.name}
+            </h2>
+            {!overlay.isCheckout && overlay.role && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Role: {overlay.role}
+              </p>
+            )}
+            <p className="mt-4 text-lg font-semibold">
+              {overlay.isCheckout ? "Checked Out" : "Checked In"}
+            </p>
+            <p className="text-2xl font-mono">{overlay.time}</p>
+            {overlay.worked && (
+              <p className="mt-3 text-muted-foreground">
+                Worked: <span className="font-semibold">{overlay.worked}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }

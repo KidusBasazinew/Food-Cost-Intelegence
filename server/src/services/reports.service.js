@@ -8,6 +8,7 @@ import { getWasteAnalytics } from "./analytics/wasteAnalytics.service.js";
 import { getMenuEngineering } from "./analytics/menuEngineering.service.js";
 import { getSupplierAnalytics } from "./analytics/supplierAnalytics.service.js";
 import { getInventoryForecast } from "./analytics/inventoryForecast.service.js";
+import { buildAttendanceReport } from "./workforce.reports.service.js";
 
 function withBranchScope({ hotelId, branchId }) {
   if (branchId) {
@@ -61,6 +62,12 @@ export function listAvailableReports() {
       name: "Inventory Leakage / Variance",
       description:
         "Stock count variances, missing stock, and estimated loss value",
+    },
+    {
+      type: "ATTENDANCE",
+      name: "Attendance Summary",
+      description:
+        "Employee present/absent days, late count, hours worked, overtime, attendance %",
     },
   ];
 }
@@ -280,6 +287,10 @@ export async function buildReport({
       title: "Inventory Leakage / Variance Report",
       rows,
     };
+  }
+
+  if (type === "ATTENDANCE") {
+    return await buildAttendanceReport({ hotelId, branchId, from, to });
   }
 
   return { title: "Report", rows: [] };

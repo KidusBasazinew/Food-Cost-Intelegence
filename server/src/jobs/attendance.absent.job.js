@@ -13,6 +13,23 @@ function endOfDay(d) {
   return e;
 }
 
+async function hasConsecutiveAbsences(employeeId, todayStart, days) {
+  for (let i = 0; i < days; i++) {
+    const dayStart = new Date(todayStart);
+    dayStart.setDate(dayStart.getDate() - i);
+    const dayEnd = endOfDay(dayStart);
+    const record = await prisma.attendanceRecord.findFirst({
+      where: {
+        employeeId,
+        date: { gte: dayStart, lt: dayEnd },
+        status: "ABSENT",
+      },
+    });
+    if (!record) return false;
+  }
+  return true;
+}
+
 async function runAbsentCheck() {
   const now = new Date();
   const start = startOfDay(now);
@@ -43,25 +60,17 @@ async function runAbsentCheck() {
           },
         });
 
-        // Check for 3 consecutive absences
-        const threeDaysAgo = new Date(start);
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-        const absentCount = await prisma.attendanceRecord.count({
-          where: {
-            employeeId: emp.id,
-            date: { gte: threeDaysAgo, lt: end },
-            status: "ABSENT",
-          },
-        });
-        if (absentCount >= 3) {
+        // Check for 3 consecutive calendar-day absences ending today
+        const consecutiveAbsent = await hasConsecutiveAbsences(emp.id, start, 3);
+        if (consecutiveAbsent) {
           await notificationService.createNotificationIfNotExists({
             data: {
               hotelId: emp.hotelId,
               branchId: emp.branchId ?? null,
               type: "SYSTEM_ALERT",
               severity: "HIGH",
-              title: `${emp.firstName} ${emp.lastName} absent ${absentCount} days`,
-              message: `Employee absent ${absentCount} consecutive days`,
+              title: `${emp.firstName} ${emp.lastName} absent 3 days consecutively`,
+              message: "Employee absent 3 days consecutively",
               actionUrl: `/workforce/employees/${emp.id}`,
             },
           });

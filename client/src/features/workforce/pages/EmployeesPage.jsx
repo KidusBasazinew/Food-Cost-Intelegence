@@ -11,12 +11,14 @@ import {
   FormField,
 } from "@/components/ui/erp";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Users, UserCheck, UserX } from "lucide-react";
 import {
   useEmployeesQuery,
   useCreateEmployeeMutation,
   useResetPinMutation,
   useUpdateEmployeeMutation,
+  useDisableEmployeeMutation,
 } from "@/features/workforce/hooks/useWorkforce";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,21 +29,29 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
+function maskPin(pin) {
+  if (!pin) return "—";
+  return "●".repeat(Math.min(pin.length, 4));
+}
+
 export default function EmployeesPage() {
   const q = useEmployeesQuery();
   const createMut = useCreateEmployeeMutation();
-  const updateMut = useUpdateEmployeeMutation?.() ?? {
-    mutateAsync: async () => {},
-  };
+  const updateMut = useUpdateEmployeeMutation();
   const resetMut = useResetPinMutation();
+  const disableMut = useDisableEmployeeMutation();
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [newPin, setNewPin] = useState("");
   const [form, setForm] = useState({
     employeeCode: "",
     firstName: "",
     lastName: "",
     role: "OTHER",
+    phone: "",
     pinCode: "",
   });
 
@@ -51,7 +61,7 @@ export default function EmployeesPage() {
     () => [
       {
         accessorKey: "employeeCode",
-        header: "Code",
+        header: "Employee Code",
         cell: ({ row }) => (
           <div className="font-medium">{row.original.employeeCode}</div>
         ),
@@ -59,14 +69,34 @@ export default function EmployeesPage() {
       {
         accessorKey: "firstName",
         header: "Name",
-        cell: ({ row }) => `${row.original.firstName} ${row.original.lastName}`,
+        cell: ({ row }) =>
+          `${row.original.firstName} ${row.original.lastName}`,
       },
       { accessorKey: "role", header: "Role" },
+      {
+        accessorKey: "phone",
+        header: "Phone",
+        cell: ({ row }) => row.original.phone || "—",
+      },
+      {
+        accessorKey: "isActive",
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge variant={row.original.isActive ? "default" : "secondary"}>
+            {row.original.isActive ? "Active" : "Inactive"}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "pinCode",
+        header: "PIN",
+        cell: ({ row }) => maskPin(row.original.pinCode),
+      },
       {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="ghost"
@@ -77,6 +107,7 @@ export default function EmployeesPage() {
                   firstName: row.original.firstName,
                   lastName: row.original.lastName,
                   role: row.original.role,
+                  phone: row.original.phone || "",
                   pinCode: "",
                 });
                 setDialogOpen(true);
@@ -84,12 +115,29 @@ export default function EmployeesPage() {
             >
               Edit
             </Button>
+            {row.original.isActive && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  if (
+                    window.confirm(
+                      `Disable ${row.original.firstName} ${row.original.lastName}?`,
+                    )
+                  ) {
+                    await disableMut.mutateAsync(row.original.id);
+                  }
+                }}
+              >
+                Disable
+              </Button>
+            )}
             <Button
               size="sm"
-              onClick={async () => {
-                const newPin = prompt("Enter new PIN:");
-                if (newPin)
-                  await resetMut.mutateAsync({ id: row.original.id, newPin });
+              onClick={() => {
+                setResetTarget(row.original);
+                setNewPin("");
+                setResetDialogOpen(true);
               }}
             >
               Reset PIN
@@ -98,7 +146,7 @@ export default function EmployeesPage() {
         ),
       },
     ],
-    [resetMut],
+    [disableMut],
   );
 
   const toolbar = (
@@ -113,6 +161,7 @@ export default function EmployeesPage() {
             firstName: "",
             lastName: "",
             role: "OTHER",
+            phone: "",
             pinCode: "",
           });
           setDialogOpen(true);
@@ -130,7 +179,8 @@ export default function EmployeesPage() {
       firstName: form.firstName,
       lastName: form.lastName,
       role: form.role,
-      pinCode: form.pinCode,
+      phone: form.phone || undefined,
+      pinCode: form.pinCode || undefined,
     };
     if (selected) {
       await updateMut.mutateAsync({ id: selected.id, input: payload });
@@ -139,6 +189,14 @@ export default function EmployeesPage() {
     }
     setDialogOpen(false);
     setSelected(null);
+  }
+
+  async function onResetPin() {
+    if (!resetTarget || !newPin) return;
+    await resetMut.mutateAsync({ id: resetTarget.id, newPin });
+    setResetDialogOpen(false);
+    setResetTarget(null);
+    setNewPin("");
   }
 
   return (
@@ -156,7 +214,6 @@ export default function EmployeesPage() {
           accent="blue"
           loading={q.isLoading || q.isPending}
         />
-
         <KpiCard
           label="Active"
           value={q.data?.filter((e) => e.isActive).length ?? "—"}
@@ -165,7 +222,6 @@ export default function EmployeesPage() {
           accent="emerald"
           loading={q.isLoading || q.isPending}
         />
-
         <KpiCard
           label="Inactive"
           value={q.data?.filter((e) => !e.isActive).length ?? "—"}
@@ -174,7 +230,7 @@ export default function EmployeesPage() {
           accent="rose"
           loading={q.isLoading || q.isPending}
         />
-      </KpiGrid>{" "}
+      </KpiGrid>
       <div className="mt-6">
         <DataTable
           columns={columns}
@@ -186,6 +242,7 @@ export default function EmployeesPage() {
           emptyDescription="Create an employee to get started."
         />
       </div>
+
       <DialogForm
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -193,12 +250,7 @@ export default function EmployeesPage() {
         description="Manage employee profiles, roles, and authorization details."
         onSubmit={onSubmit}
         submitLabel={selected ? "Save" : "Create"}
-        loading={
-          createMut?.isPending ||
-          createMut?.isLoading ||
-          updateMut?.isPending ||
-          updateMut?.isLoading
-        }
+        loading={createMut.isPending || updateMut.isPending}
         size="lg"
       >
         <FormSection title="Employee details">
@@ -209,9 +261,9 @@ export default function EmployeesPage() {
                 setForm((f) => ({ ...f, employeeCode: e.target.value }))
               }
               placeholder="e.g. EMP-001"
+              disabled={!!selected}
             />
           </FormField>
-
           <FormRow>
             <FormField label="First name">
               <Input
@@ -222,7 +274,6 @@ export default function EmployeesPage() {
                 placeholder="First name"
               />
             </FormField>
-
             <FormField label="Last name">
               <Input
                 value={form.lastName}
@@ -233,8 +284,16 @@ export default function EmployeesPage() {
               />
             </FormField>
           </FormRow>
-
           <FormRow>
+            <FormField label="Phone">
+              <Input
+                value={form.phone}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, phone: e.target.value }))
+                }
+                placeholder="Phone number"
+              />
+            </FormField>
             <FormField label="Role">
               <Select
                 value={form.role}
@@ -257,19 +316,37 @@ export default function EmployeesPage() {
                 </SelectContent>
               </Select>
             </FormField>
-
-            <FormField label="PIN">
-              <Input
-                type="password"
-                value={form.pinCode}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, pinCode: e.target.value }))
-                }
-                placeholder="4-digit entry pin"
-              />
-            </FormField>
           </FormRow>
+          <FormField label="PIN" fullWidth>
+            <Input
+              type="password"
+              value={form.pinCode}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, pinCode: e.target.value }))
+              }
+              placeholder={selected ? "Leave blank to keep current PIN" : "4-digit PIN"}
+            />
+          </FormField>
         </FormSection>
+      </DialogForm>
+
+      <DialogForm
+        open={resetDialogOpen}
+        onOpenChange={setResetDialogOpen}
+        title="Reset PIN"
+        description={`Set a new PIN for ${resetTarget?.firstName ?? ""} ${resetTarget?.lastName ?? ""}`}
+        onSubmit={onResetPin}
+        submitLabel="Reset PIN"
+        loading={resetMut.isPending}
+      >
+        <FormField label="New PIN" fullWidth>
+          <Input
+            type="password"
+            value={newPin}
+            onChange={(e) => setNewPin(e.target.value)}
+            placeholder="Enter new PIN"
+          />
+        </FormField>
       </DialogForm>
     </PageShell>
   );

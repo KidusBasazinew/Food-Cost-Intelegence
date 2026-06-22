@@ -15,22 +15,43 @@ export const register = asyncHandler(async (req, res) => {
   return created(res, "Registration successful", result);
 });
 
-export const login = asyncHandler(async (req, res) => {
-  const { accessToken, refreshToken, refreshTokenExpiresAt, user } =
-    await authService.login({
-    ...req.body,
-    ipAddress: getRequestIp(req),
-    userAgent: req.get("user-agent"),
+export const addStaff = asyncHandler(async (req, res) => {
+  // Extract hotelId and branchId from the authenticated Admin's token payload
+  const { hotelId, branchId } = req.auth;
+
+  const result = await authService.createStaffUser({
+    hotelId,
+    branchId,
+    staffData: req.body, // Expects firstName, lastName, email, password, and role
   });
 
-  const isProd = env.NODE_ENV === "production";
-  res.cookie(
-    "refreshToken",
-    refreshToken,
-    authService.getRefreshCookieOptions({ isProd, expiresAt: refreshTokenExpiresAt }),
-  );
+  return created(res, "Staff user created successfully", result);
+});
 
-  return ok(res, "Login successful", { accessToken, user });
+export const login = asyncHandler(async (req, res) => {
+  try {
+    const { accessToken, refreshToken, refreshTokenExpiresAt, user } =
+      await authService.login({
+        ...req.body,
+        ipAddress: getRequestIp(req),
+        userAgent: req.get("user-agent"),
+      });
+
+    const isProd = env.NODE_ENV === "production";
+    res.cookie(
+      "refreshToken",
+      refreshToken,
+      authService.getRefreshCookieOptions({
+        isProd,
+        expiresAt: refreshTokenExpiresAt,
+      }),
+    );
+
+    return ok(res, "Login successful", { accessToken, user });
+  } catch (err) {
+    console.error("Login error:", err);
+    throw err; // Let the error handling middleware process this
+  }
 });
 
 export const logout = asyncHandler(async (req, res) => {
@@ -39,7 +60,10 @@ export const logout = asyncHandler(async (req, res) => {
   await authService.logout({ refreshToken });
 
   const isProd = env.NODE_ENV === "production";
-  res.clearCookie("refreshToken", authService.getRefreshCookieOptions({ isProd }));
+  res.clearCookie(
+    "refreshToken",
+    authService.getRefreshCookieOptions({ isProd }),
+  );
 
   return ok(res, "Logged out", null);
 });

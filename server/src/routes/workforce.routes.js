@@ -10,7 +10,11 @@ import {
   updateEmployeeSchema,
   listEmployeesSchema,
   resetPinSchema,
+  createScheduleSchema,
+  updateScheduleSchema,
 } from "../validations/workforce.validation.js";
+import * as scheduleController from "../controllers/workforce.schedule.controller.js";
+import * as reportsController from "../controllers/workforce.reports.controller.js";
 
 export const workforceRouter = Router();
 
@@ -49,5 +53,20 @@ workforceRouter.post(
   validate(resetPinSchema),
   employeesController.resetPin,
 );
+
+workforceRouter.get("/schedules", scheduleController.listSchedules);
+workforceRouter.post(
+  "/schedules",
+  validate(createScheduleSchema),
+  scheduleController.createSchedule,
+);
+workforceRouter.patch(
+  "/schedules/:id",
+  validate(updateScheduleSchema),
+  scheduleController.updateSchedule,
+);
+workforceRouter.delete("/schedules/:id", scheduleController.deleteSchedule);
+
+workforceRouter.get("/reports/summary", reportsController.employeeSummaries);
 
 export default workforceRouter;
