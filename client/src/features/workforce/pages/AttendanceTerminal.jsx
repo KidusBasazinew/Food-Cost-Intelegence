@@ -3,11 +3,16 @@ import { usePinMutation } from "@/features/workforce/hooks/useWorkforce";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { PageShell, PageHeader } from "@/components/ui/erp";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 
+const keypad = [
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9],
+  ["del", 0, "ok"],
+];
 function PadButton({ value, onClick, disabled }) {
-  const label =
-    value === "del" ? "⌫" : value === "ok" ? "OK" : String(value);
+  const label = value === "del" ? "⌫" : value === "ok" ? "OK" : String(value);
   return (
     <button
       type="button"
@@ -49,7 +54,7 @@ export default function AttendanceTerminal() {
     const d = pinMutation.data;
     const emp = d?.data?.employee;
     const isCheckout = d?.message === "Checked Out";
-
+    console.log("PIN RESPONSE", pinMutation.data);
     setOverlay({
       isCheckout,
       name: emp ? `${emp.firstName} ${emp.lastName}` : "",
@@ -58,8 +63,11 @@ export default function AttendanceTerminal() {
         ? formatTime(d?.data?.checkOutAt)
         : formatTime(d?.data?.checkInAt),
       worked: isCheckout ? formatWorked(d?.data?.workedMinutes) : null,
+      status: d?.data?.status,
+      lateMinutes: d?.data?.lateMinutes || 0,
     });
     setPin("");
+    console.log(overlay);
 
     const t = setTimeout(() => {
       setOverlay(null);
@@ -83,6 +91,11 @@ export default function AttendanceTerminal() {
 
   const busy = pinMutation.isPending;
 
+  const isLate =
+    !overlay?.isCheckout &&
+    overlay?.status === "LATE" &&
+    overlay?.lateMinutes > 0;
+
   return (
     <PageShell className="relative">
       <PageHeader title="ATTENDANCE" subtitle="Enter PIN to check in or out" />
@@ -101,13 +114,19 @@ export default function AttendanceTerminal() {
           </div>
         )}
 
-        <div className="flex flex-wrap justify-center">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-            <PadButton key={n} value={n} onClick={onPress} disabled={busy} />
+        <div className="space-y-2">
+          {keypad.map((row, i) => (
+            <div key={i} className="flex justify-center gap-2">
+              {row.map((item) => (
+                <PadButton
+                  key={item}
+                  value={item}
+                  onClick={onPress}
+                  disabled={busy}
+                />
+              ))}
+            </div>
           ))}
-          <PadButton value="del" onClick={onPress} disabled={busy} />
-          <PadButton value={0} onClick={onPress} disabled={busy} />
-          <PadButton value="ok" onClick={onPress} disabled={busy} />
         </div>
 
         <div className="mt-6">
@@ -124,19 +143,49 @@ export default function AttendanceTerminal() {
 
       {overlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-card p-8 text-center shadow-xl">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
+          <div
+            className={`w-full max-w-sm rounded-2xl p-8 text-center shadow-xl ${
+              isLate
+                ? "bg-orange-50 border-2 border-orange-500"
+                : "bg-emerald-50 border-2 border-emerald-500"
+            }`}
+          >
+            {isLate ? (
+              <AlertTriangle className="mx-auto h-12 w-12 text-orange-600" />
+            ) : (
+              <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
+            )}
             <h2 className="mt-4 text-2xl font-bold">
-              {overlay.isCheckout ? "Goodbye" : "Welcome"} {overlay.name}
+              {overlay.isCheckout
+                ? `Goodbye ${overlay.name}`
+                : isLate
+                  ? `${overlay.name}`
+                  : `Welcome ${overlay.name}`}
             </h2>
             {!overlay.isCheckout && overlay.role && (
               <p className="mt-1 text-sm text-muted-foreground">
                 Role: {overlay.role}
               </p>
             )}
-            <p className="mt-4 text-lg font-semibold">
-              {overlay.isCheckout ? "Checked Out" : "Checked In"}
-            </p>
+            {overlay.isCheckout ? (
+              <p className="mt-4 text-lg font-semibold">Checked Out</p>
+            ) : isLate ? (
+              <>
+                <p className="mt-4 text-lg font-semibold text-orange-700">
+                  Warning: Late Arrival
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-orange-800">
+                  {overlay.lateMinutes} minutes late
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-4 text-lg font-semibold text-emerald-700">
+                  Welcome! You're on time.
+                </p>
+              </>
+            )}
             <p className="text-2xl font-mono">{overlay.time}</p>
             {overlay.worked && (
               <p className="mt-3 text-muted-foreground">

@@ -71,6 +71,11 @@ export async function handlePin({ pin, hotelId, branchId, actor } = {}) {
     const diffMinutes =
       diffMs > 0 ? Math.max(0, Math.round(diffMs / 60_000)) : 0;
 
+    console.log({
+      diffMinutes,
+      grace,
+      lateMinutesCandidate: diffMinutes > grace ? diffMinutes - grace : 0,
+    });
     const lateMinutes = diffMinutes > grace ? diffMinutes - grace : 0;
     const status = lateMinutes > 0 ? "LATE" : "PRESENT";
 

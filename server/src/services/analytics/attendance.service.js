@@ -2,103 +2,165 @@ import { prisma } from "../../prisma/client.js";
 import { formatDayUTC } from "./analyticsHelpers.js";
 
 export async function getAttendanceOverview({ hotelId, branchId, from, to }) {
-  // KPIs: total employees, present today, late today, absent today, overtime today
-  const [employees, records] = await Promise.all([
-    prisma.employee.count({ where: { hotelId } }),
+  const employeeWhere = {
+    hotelId,
+    ...(branchId
+      ? {
+          OR: [{ branchId }, { branchId: null }],
+        }
+      : {}),
+  };
+
+  const [employees, employeeList, records] = await Promise.all([
+    prisma.employee.count({
+      where: employeeWhere,
+    }),
+
+    prisma.employee.findMany({
+      where: employeeWhere,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+      },
+    }),
+
     prisma.attendanceRecord.findMany({
       where: {
-        employee: { hotelId },
-        date: { gte: from, lte: to },
-        ...(branchId
-          ? { employee: { OR: [{ branchId }, { branchId: null }] } }
-          : {}),
+        employee: employeeWhere,
+        date: {
+          gte: from,
+          lte: to,
+        },
       },
-      include: { employee: true },
+      include: {
+        employee: true,
+      },
     }),
   ]);
 
-  // Build daily trend for last N days
+  // --------------------------------------------------
+  // Build day map
+  // --------------------------------------------------
+
   const dayMap = new Map();
-  const d = new Date(from);
-  while (d <= to) {
-    const key = formatDayUTC(d);
+
+  const cursor = new Date(from);
+
+  while (cursor <= to) {
+    const key = formatDayUTC(cursor);
+
     dayMap.set(key, {
       day: key,
       present: 0,
       late: 0,
       absent: 0,
       overtimeMinutes: 0,
-      checkedOut: 0, // 👈 1. ADD checkedOut tracking counter to the daily initialization map
+      checkedOut: 0,
     });
-    d.setDate(d.getDate() + 1);
+
+    cursor.setDate(cursor.getDate() + 1);
   }
+
+  // --------------------------------------------------
+  // Track attendance per employee/day
+  // --------------------------------------------------
+
+  const attendanceByDay = new Map();
 
   const lateCounts = new Map();
   const overtimeByEmployee = new Map();
 
-  for (const r of records) {
-    const day = formatDayUTC(new Date(r.date));
+  for (const record of records) {
+    const day = formatDayUTC(new Date(record.date));
+
     const entry = dayMap.get(day);
     if (!entry) continue;
-    if (r.status === "ABSENT") entry.absent += 1;
-    if (
-      r.status === "PRESENT" ||
-      r.status === "LATE" ||
-      r.status === "HALF_DAY"
-    )
-      entry.present += 1;
-    if (r.status === "LATE") entry.late += 1;
-    if (r.overtimeMinutes) entry.overtimeMinutes += r.overtimeMinutes;
 
-    // 👈 2. Increment checkout baseline if checkOutAt has a valid timestamp string
-    if (r.checkOutAt) {
+    if (
+      record.status === "PRESENT" ||
+      record.status === "LATE" ||
+      record.status === "HALF_DAY"
+    ) {
+      entry.present += 1;
+    }
+
+    if (record.status === "LATE") {
+      entry.late += 1;
+    }
+
+    if (record.overtimeMinutes) {
+      entry.overtimeMinutes += record.overtimeMinutes;
+    }
+
+    if (record.checkOutAt) {
       entry.checkedOut += 1;
     }
 
-    // late per employee
-    if (r.status === "LATE") {
-      const c = lateCounts.get(r.employeeId) ?? {
-        count: 0,
-        name: `${r.employee.firstName} ${r.employee.lastName}`,
-        id: r.employeeId,
-      };
-      c.count += 1;
-      lateCounts.set(r.employeeId, c);
+    // Store employee attendance for absence calculation
+    if (!attendanceByDay.has(day)) {
+      attendanceByDay.set(day, new Set());
     }
 
-    if (r.overtimeMinutes) {
-      const o = overtimeByEmployee.get(r.employeeId) ?? {
-        minutes: 0,
-        name: `${r.employee.firstName} ${r.employee.lastName}`,
-        id: r.employeeId,
+    attendanceByDay.get(day).add(record.employeeId);
+
+    // Top late employees
+    if (record.status === "LATE") {
+      const current = lateCounts.get(record.employeeId) ?? {
+        id: record.employeeId,
+        name: `${record.employee.firstName} ${record.employee.lastName}`,
+        count: 0,
       };
-      o.minutes += r.overtimeMinutes;
-      overtimeByEmployee.set(r.employeeId, o);
+
+      current.count += 1;
+
+      lateCounts.set(record.employeeId, current);
+    }
+
+    // Top overtime employees
+    if (record.overtimeMinutes) {
+      const current = overtimeByEmployee.get(record.employeeId) ?? {
+        id: record.employeeId,
+        name: `${record.employee.firstName} ${record.employee.lastName}`,
+        minutes: 0,
+      };
+
+      current.minutes += record.overtimeMinutes;
+
+      overtimeByEmployee.set(record.employeeId, current);
     }
   }
+
+  // --------------------------------------------------
+  // Dynamic absence calculation
+  // --------------------------------------------------
+
+  for (const [day, entry] of dayMap.entries()) {
+    const attendedEmployees = attendanceByDay.get(day)?.size ?? 0;
+
+    entry.absent = Math.max(0, employees - attendedEmployees);
+  }
+
+  // --------------------------------------------------
+  // Trends
+  // --------------------------------------------------
 
   const trend = Array.from(dayMap.values()).sort((a, b) =>
     a.day.localeCompare(b.day),
   );
 
-  const topLate = Array.from(lateCounts.values())
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-  const topOvertime = Array.from(overtimeByEmployee.values())
-    .sort((a, b) => b.minutes - a.minutes)
-    .slice(0, 10);
+  // --------------------------------------------------
+  // Employee attendance %
+  // --------------------------------------------------
 
-  // Per-employee attendance percentage for the selected range
   const totalDays = Math.max(
     1,
     Math.round((to - from) / (24 * 60 * 60 * 1000)) + 1,
   );
+
   const employeeStats = new Map();
 
-  for (const emp of await prisma.employee.findMany({
-    where: { hotelId, ...(branchId ? { OR: [{ branchId }, { branchId: null }] } : {}) },
-    select: { id: true, firstName: true, lastName: true },
-  })) {
+  for (const emp of employeeList) {
     employeeStats.set(emp.id, {
       id: emp.id,
       name: `${emp.firstName} ${emp.lastName}`,
@@ -106,50 +168,70 @@ export async function getAttendanceOverview({ hotelId, branchId, from, to }) {
     });
   }
 
-  for (const r of records) {
-    const stat = employeeStats.get(r.employeeId);
-    if (!stat) continue;
+  for (const record of records) {
     if (
-      r.status === "PRESENT" ||
-      r.status === "LATE" ||
-      r.status === "HALF_DAY"
+      record.status === "PRESENT" ||
+      record.status === "LATE" ||
+      record.status === "HALF_DAY"
     ) {
-      stat.presentDays += 1;
+      const stat = employeeStats.get(record.employeeId);
+
+      if (stat) {
+        stat.presentDays += 1;
+      }
     }
   }
 
   const attendancePercentage = Array.from(employeeStats.values())
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      attendancePercent: Math.round((s.presentDays / totalDays) * 100),
-      presentDays: s.presentDays,
+    .map((employee) => ({
+      id: employee.id,
+      name: employee.name,
+      presentDays: employee.presentDays,
+      attendancePercent: Math.round((employee.presentDays / totalDays) * 100),
     }))
     .sort((a, b) => b.attendancePercent - a.attendancePercent)
     .slice(0, 20);
 
+  // --------------------------------------------------
+  // Insights
+  // --------------------------------------------------
+
+  const topLate = Array.from(lateCounts.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const topOvertime = Array.from(overtimeByEmployee.values())
+    .sort((a, b) => b.minutes - a.minutes)
+    .slice(0, 10);
+
+  // --------------------------------------------------
   // Today's KPIs
+  // --------------------------------------------------
+
   const todayKey = formatDayUTC(new Date());
+
   const today = dayMap.get(todayKey) ?? {
     present: 0,
     late: 0,
-    absent: 0,
+    absent: employees,
     overtimeMinutes: 0,
-    checkedOut: 0, // 👈 3. Fallback tracking default safely
+    checkedOut: 0,
   };
 
   return {
     kpis: {
       totalEmployees: employees,
       presentToday: today.present,
-      checkedOutToday: today.checkedOut, // 👈 4. EXPORT metrics object safely to matching React hook pipeline
+      checkedOutToday: today.checkedOut,
       lateToday: today.late,
       absentToday: today.absent,
       overtimeTodayMinutes: today.overtimeMinutes,
     },
+
     charts: {
       attendanceTrend: trend,
     },
+
     insights: {
       topLateEmployees: topLate,
       topOvertimeEmployees: topOvertime,

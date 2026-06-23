@@ -30,6 +30,7 @@ import {
   PageShell,
   StatusBadge,
 } from "@/components/ui/erp";
+import { moneyToCents } from "@/utils/priceToCent";
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -74,7 +75,7 @@ export function RecipeManagementPage() {
       imageUrl: form.imageUrl?.trim() || null,
       yieldQuantity: form.yieldQuantity,
       yieldUnit: form.yieldUnit,
-      sellingPriceCents: form.sellingPriceCents,
+      sellingPriceCents: moneyToCents(form.sellingPriceCents),
       status: form.status,
     });
     setForm((f) => ({ ...EMPTY_FORM, yieldUnit: f.yieldUnit }));
@@ -298,12 +299,13 @@ export function RecipeManagementPage() {
               </SelectContent>
             </Select>
           </FormField>
-          <FormField label="Selling price (cents)">
+          <FormField label="Selling price (birr)">
             <Input
               value={form.sellingPriceCents}
               onChange={(e) =>
                 setForm((f) => ({ ...f, sellingPriceCents: e.target.value }))
               }
+              placeholder="100.00"
             />
           </FormField>
           <FormField label="Status">

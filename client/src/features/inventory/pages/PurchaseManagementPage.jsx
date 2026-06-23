@@ -32,6 +32,7 @@ import {
   PageShell,
   StatusBadge,
 } from "@/components/ui/erp";
+import { moneyToCents } from "@/utils/priceToCent";
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -126,13 +127,13 @@ export function PurchaseManagementPage() {
     if (!canSubmit) return;
     await createPurchase.mutateAsync({
       supplierId: form.supplierId,
-      taxCents: form.taxCents,
+      taxCents: moneyToCents(form.taxCents),
       notes: form.notes.trim() ? form.notes.trim() : undefined,
       items: form.items.map((l) => ({
         inventoryItemId: l.inventoryItemId,
         unitId: l.unitId,
         quantity: l.quantity,
-        unitCostCents: l.unitCostCents,
+        unitCostCents: moneyToCents(l.unitCostCents),
       })),
     });
     setForm(EMPTY_FORM);
@@ -303,12 +304,13 @@ export function PurchaseManagementPage() {
               </SelectContent>
             </Select>
           </FormField>
-          <FormField label="Tax (cents)">
+          <FormField label="Tax (birr)">
             <Input
               value={form.taxCents}
               onChange={(e) =>
                 setForm((f) => ({ ...f, taxCents: e.target.value }))
               }
+              placeholder="15.00"
             />
           </FormField>
           <FormField label="Notes" fullWidth>
@@ -391,13 +393,13 @@ export function PurchaseManagementPage() {
                   </FormField>
                 </div>
                 <div className="lg:col-span-2">
-                  <FormField label="Unit cost (¢)">
+                  <FormField label="Unit cost (birr)">
                     <Input
                       value={line.unitCostCents}
                       onChange={(e) =>
                         setLine(idx, { unitCostCents: e.target.value })
                       }
-                      placeholder="500"
+                      placeholder="100.00"
                     />
                   </FormField>
                 </div>
