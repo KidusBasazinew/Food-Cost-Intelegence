@@ -3,7 +3,8 @@ import { Router } from "express";
 import * as measurementUnitController from "../controllers/measurementUnit.controller.js";
 import { validate } from "../middlewares/validate.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import {
   createMeasurementUnitSchema,
   measurementUnitParamsSchema,
@@ -23,21 +24,21 @@ measurementUnitRouter.get(
 
 measurementUnitRouter.post(
   "/",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.MEASUREMENT_UNITS_MANAGE),
   validate(createMeasurementUnitSchema),
   measurementUnitController.create,
 );
 
 measurementUnitRouter.patch(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.MEASUREMENT_UNITS_MANAGE),
   validate(updateMeasurementUnitSchema),
   measurementUnitController.update,
 );
 
 measurementUnitRouter.delete(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.MEASUREMENT_UNITS_MANAGE),
   validate(measurementUnitParamsSchema),
   measurementUnitController.remove,
 );

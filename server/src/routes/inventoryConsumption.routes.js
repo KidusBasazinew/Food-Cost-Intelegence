@@ -2,8 +2,9 @@ import { Router } from "express";
 
 import * as controller from "../controllers/inventoryConsumption.controller.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
 import { validate } from "../middlewares/validate.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import {
   consumeRecipeSchema,
   consumptionReportSchema,
@@ -35,7 +36,7 @@ inventoryConsumptionRouter.get(
 
 inventoryConsumptionRouter.post(
   "/consume-recipe",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.INVENTORY_CONSUMPTION_CREATE),
   validate(consumeRecipeSchema),
   controller.consumeRecipe,
 );

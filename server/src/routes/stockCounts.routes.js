@@ -1,8 +1,9 @@
 import { Router } from "express";
 
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
 import { validate } from "../middlewares/validate.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import * as controller from "../controllers/stockCount.controller.js";
 import {
   completeStockCountSchema,
@@ -20,49 +21,49 @@ stockCountsRouter.use(authMiddleware);
 
 stockCountsRouter.get(
   "/",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.STOCK_COUNTS_VIEW),
   validate(listStockCountsSchema),
   controller.listStockCounts,
 );
 
 stockCountsRouter.post(
   "/",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.STOCK_COUNTS_CREATE),
   validate(createStockCountSchema),
   controller.createStockCount,
 );
 
 stockCountsRouter.get(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.STOCK_COUNTS_VIEW),
   validate(stockCountIdParamsSchema),
   controller.getStockCount,
 );
 
 stockCountsRouter.patch(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.STOCK_COUNTS_UPDATE),
   validate(updateStockCountSchema),
   controller.updateStockCount,
 );
 
 stockCountsRouter.put(
   "/:id/items",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.STOCK_COUNTS_UPDATE),
   validate(upsertStockCountItemSchema),
   controller.upsertItem,
 );
 
 stockCountsRouter.delete(
   "/:id/items/:itemId",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.STOCK_COUNTS_DELETE),
   validate(stockCountItemParamsSchema),
   controller.deleteItem,
 );
 
 stockCountsRouter.post(
   "/:id/complete",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.STOCK_COUNTS_UPDATE),
   validate(completeStockCountSchema),
   controller.completeStockCount,
 );

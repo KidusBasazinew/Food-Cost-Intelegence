@@ -26,62 +26,177 @@ import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/useSidebarStore";
 import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { usePermission } from "@/hooks/usePermission";
+import {
+  DASHBOARD_VIEW,
+  ANALYTICS_VIEW,
+  INVENTORY_VIEW,
+  RECIPES_VIEW,
+  PURCHASES_VIEW,
+  SUPPLIERS_VIEW,
+  FOOD_COST_VIEW,
+  INVENTORY_CONSUMPTION_VIEW,
+  WASTE_VIEW,
+  LEAKAGE_VIEW,
+  PROFITABILITY_VIEW,
+  REPORTS_VIEW,
+  POS_VIEW,
+  ORDERS_VIEW,
+  KITCHEN_DISPLAY_VIEW,
+  EMPLOYEES_VIEW,
+  ATTENDANCE_VIEW,
+  WORKFORCE_REPORTS_VIEW,
+  ROOMS_VIEW,
+  RESERVATIONS_VIEW,
+  HOUSEKEEPING_VIEW,
+  LATE_CHECKOUT_VIEW,
+} from "@/lib/permissions";
 
 const navGroups = [
   {
     label: "Overview",
     items: [
-      { to: "/dashboard", label: "Dashboard", icon: BarChart3 },
-      { to: "/analytics", label: "Analytics", icon: LineChart },
+      {
+        to: "/dashboard",
+        label: "Dashboard",
+        icon: BarChart3,
+        permission: DASHBOARD_VIEW,
+      },
+      {
+        to: "/analytics",
+        label: "Analytics",
+        icon: LineChart,
+        permission: ANALYTICS_VIEW,
+      },
     ],
   },
   {
     label: "Operations",
     items: [
-      { to: "/inventory", label: "Inventory", icon: Package },
-      { to: "/recipes", label: "Recipes", icon: ClipboardList },
-      { to: "/purchases", label: "Purchases", icon: ShoppingCart },
-      { to: "/suppliers", label: "Suppliers", icon: Truck },
+      {
+        to: "/inventory",
+        label: "Inventory",
+        icon: Package,
+        permission: INVENTORY_VIEW,
+      },
+      {
+        to: "/recipes",
+        label: "Recipes",
+        icon: ClipboardList,
+        permission: RECIPES_VIEW,
+      },
+      {
+        to: "/purchases",
+        label: "Purchases",
+        icon: ShoppingCart,
+        permission: PURCHASES_VIEW,
+      },
+      {
+        to: "/suppliers",
+        label: "Suppliers",
+        icon: Truck,
+        permission: SUPPLIERS_VIEW,
+      },
     ],
   },
   {
     label: "Intelligence",
     items: [
-      { to: "/food-cost", label: "Food Cost", icon: UtensilsCrossed },
-      { to: "/consumption", label: "Consumption", icon: Zap },
-      { to: "/waste", label: "Waste", icon: Trash2 },
-      { to: "/profitability", label: "Profitability", icon: TrendingUp },
+      {
+        to: "/food-cost",
+        label: "Food Cost",
+        icon: UtensilsCrossed,
+        permission: FOOD_COST_VIEW,
+      },
+      {
+        to: "/consumption",
+        label: "Consumption",
+        icon: Zap,
+        permission: INVENTORY_CONSUMPTION_VIEW,
+      },
+      { to: "/waste", label: "Waste", icon: Trash2, permission: WASTE_VIEW },
+      {
+        to: "/profitability",
+        label: "Profitability",
+        icon: TrendingUp,
+        permission: PROFITABILITY_VIEW,
+      },
     ],
   },
   {
     label: "POS",
     items: [
-      { to: "/pos", label: "POS", icon: ShoppingCart },
-      { to: "/orders", label: "Orders", icon: ClipboardList },
-      { to: "/analytics", label: "Analytics", icon: BarChart3 },
-      { to: "/kitchen", label: "Kitchen Display", icon: UtensilsCrossed },
+      { to: "/pos", label: "POS", icon: ShoppingCart, permission: POS_VIEW },
+      {
+        to: "/orders",
+        label: "Orders",
+        icon: ClipboardList,
+        permission: ORDERS_VIEW,
+      },
+      {
+        to: "/kitchen",
+        label: "Kitchen Display",
+        icon: UtensilsCrossed,
+        permission: KITCHEN_DISPLAY_VIEW,
+      },
     ],
   },
   {
     label: "Organization",
-    items: [{ to: "/reports", label: "Reports", icon: Receipt }],
+    items: [
+      {
+        to: "/reports",
+        label: "Reports",
+        icon: Receipt,
+        permission: REPORTS_VIEW,
+      },
+    ],
   },
   {
     label: "House Keeping",
     items: [
-      { to: "/ops/rooms", label: "Rooms", icon: House },
-      { to: "/ops/reservations", label: "Reservations", icon: Calendar },
-      { to: "/ops/late-checkout", label: "Late Checkout", icon: Clock },
-      { to: "/ops/housekeeping", label: "Housekeeping", icon: Infinity },
-      { to: "/ops/cleaner", label: "Cleaner", icon: Clock },
+      { to: "/ops/rooms", label: "Rooms", icon: House, permission: ROOMS_VIEW },
+      {
+        to: "/ops/reservations",
+        label: "Reservations",
+        icon: Calendar,
+        permission: RESERVATIONS_VIEW,
+      },
+      {
+        to: "/ops/late-checkout",
+        label: "Late Checkout",
+        icon: Clock,
+        permission: LATE_CHECKOUT_VIEW,
+      },
+      {
+        to: "/ops/housekeeping",
+        label: "Housekeeping",
+        icon: Infinity,
+        permission: HOUSEKEEPING_VIEW,
+      },
     ],
   },
   {
     label: "Employee Attendance",
     items: [
-      { to: "/workforce/employees", label: "Employees", icon: Users },
-      { to: "/workforce/attendance", label: "Attendance", icon: ListCheck },
-      { to: "/workforce/reports", label: "Reports", icon: BarChart3 },
+      {
+        to: "/workforce/employees",
+        label: "Employees",
+        icon: Users,
+        permission: EMPLOYEES_VIEW,
+      },
+      {
+        to: "/workforce/attendance",
+        label: "Attendance",
+        icon: ListCheck,
+        permission: ATTENDANCE_VIEW,
+      },
+      {
+        to: "/workforce/reports",
+        label: "Reports",
+        icon: BarChart3,
+        permission: WORKFORCE_REPORTS_VIEW,
+      },
     ],
   },
 ];
@@ -90,10 +205,19 @@ export function Sidebar() {
   const collapsed = useSidebarStore((s) => s.collapsed);
   const closeMobile = useSidebarStore((s) => s.closeMobile);
   const user = useAuthStore((s) => s.user);
+  const { can } = usePermission();
   const hotel = user?.hotel;
   const hotelLocation = [hotel?.city, hotel?.country]
     .filter(Boolean)
     .join(", ");
+
+  // Filter nav groups and items based on permissions
+  const filteredNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => can(item.permission)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div className="flex h-dvh flex-col bg-sidebar">
@@ -140,7 +264,7 @@ export function Sidebar() {
       ) : null}
 
       <nav className="flex-1 overflow-y-auto p-3">
-        {navGroups.map((group, gi) => (
+        {filteredNavGroups.map((group, gi) => (
           <div key={group.label} className={cn(gi > 0 && "mt-5")}>
             {!collapsed ? (
               <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">

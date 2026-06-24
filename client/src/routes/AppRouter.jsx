@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { DashboardLayout } from "@/components/layouts/DashboardLayout";
 import { RequireAuth } from "@/features/auth/components/RequireAuth";
+import { PermissionRoute } from "@/components/auth/PermissionRoute";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { InventoryDashboardPage } from "@/features/inventory/pages/InventoryDashboardPage";
 import { InventoryItemDetailsPage } from "@/features/inventory/pages/InventoryItemDetailsPage";
@@ -38,6 +39,32 @@ import ElitePOS from "@/pages/restaurant/components/ElitePOS";
 import { KitchenDisplayPage } from "@/pages/restaurant/KitchenDisplayPage";
 import { PosAnalyticsPage } from "@/pages/restaurant/PosAnalyticsPage";
 import { PosOrderHistoryPage } from "@/pages/restaurant/PosOrderHistoryPage";
+import {
+  DASHBOARD_VIEW,
+  ANALYTICS_VIEW,
+  INVENTORY_VIEW,
+  RECIPES_VIEW,
+  FOOD_COST_VIEW,
+  INVENTORY_CONSUMPTION_VIEW,
+  WASTE_VIEW,
+  PROFITABILITY_VIEW,
+  LEAKAGE_VIEW,
+  PURCHASES_VIEW,
+  SUPPLIERS_VIEW,
+  REPORTS_VIEW,
+  NOTIFICATIONS_VIEW,
+  EMPLOYEES_VIEW,
+  ATTENDANCE_VIEW,
+  WORKFORCE_REPORTS_VIEW,
+  ROOMS_VIEW,
+  RESERVATIONS_VIEW,
+  HOUSEKEEPING_VIEW,
+  LATE_CHECKOUT_VIEW,
+  POS_VIEW,
+  ORDERS_VIEW,
+  KITCHEN_DISPLAY_VIEW,
+  SETTINGS_VIEW,
+} from "@/lib/permissions";
 
 export function AppRouter() {
   return (
@@ -49,86 +76,305 @@ export function AppRouter() {
 
         <Route element={<RequireAuth />}>
           <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<DashboardHomePage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <PermissionRoute
+                  permission={DASHBOARD_VIEW}
+                  element={<DashboardHomePage />}
+                />
+              }
+            />
             <Route
               path="/inventory"
               element={<Navigate to="/inventory/dashboard" replace />}
             />
             <Route
               path="/inventory/dashboard"
-              element={<InventoryDashboardPage />}
+              element={
+                <PermissionRoute
+                  permission={INVENTORY_VIEW}
+                  element={<InventoryDashboardPage />}
+                />
+              }
             />
-            <Route path="/inventory/items" element={<InventoryItemsPage />} />
+            <Route
+              path="/inventory/items"
+              element={
+                <PermissionRoute
+                  permission={INVENTORY_VIEW}
+                  element={<InventoryItemsPage />}
+                />
+              }
+            />
             <Route
               path="/inventory/measurement-units"
-              element={<MeasurementUnitsAdminPage />}
+              element={
+                <PermissionRoute
+                  permission={INVENTORY_VIEW}
+                  element={<MeasurementUnitsAdminPage />}
+                />
+              }
             />
             <Route
               path="/inventory/items/:id"
-              element={<InventoryItemDetailsPage />}
+              element={
+                <PermissionRoute
+                  permission={INVENTORY_VIEW}
+                  element={<InventoryItemDetailsPage />}
+                />
+              }
             />
             <Route
               path="/inventory/transactions"
-              element={<InventoryTransactionsPage />}
+              element={
+                <PermissionRoute
+                  permission={INVENTORY_VIEW}
+                  element={<InventoryTransactionsPage />}
+                />
+              }
             />
             <Route
               path="/inventory/low-stock"
-              element={<LowStockAlertsPage />}
+              element={
+                <PermissionRoute
+                  permission={INVENTORY_VIEW}
+                  element={<LowStockAlertsPage />}
+                />
+              }
             />
-            <Route path="/recipes" element={<RecipeManagementPage />} />
-            <Route path="/recipes/:id" element={<RecipeDetailsPage />} />
+            <Route
+              path="/recipes"
+              element={
+                <PermissionRoute
+                  permission={RECIPES_VIEW}
+                  element={<RecipeManagementPage />}
+                />
+              }
+            />
+            <Route
+              path="/recipes/:id"
+              element={
+                <PermissionRoute
+                  permission={RECIPES_VIEW}
+                  element={<RecipeDetailsPage />}
+                />
+              }
+            />
             <Route
               path="/recipes/:id/builder"
-              element={<RecipeBuilderPage />}
+              element={
+                <PermissionRoute
+                  permission={RECIPES_VIEW}
+                  element={<RecipeBuilderPage />}
+                />
+              }
             />
-            <Route path="/food-cost" element={<FoodCostDashboardPage />} />
+            <Route
+              path="/food-cost"
+              element={
+                <PermissionRoute
+                  permission={FOOD_COST_VIEW}
+                  element={<FoodCostDashboardPage />}
+                />
+              }
+            />
             <Route
               path="/consumption"
-              element={<InventoryConsumptionDashboardPage />}
+              element={
+                <PermissionRoute
+                  permission={INVENTORY_CONSUMPTION_VIEW}
+                  element={<InventoryConsumptionDashboardPage />}
+                />
+              }
             />
-            <Route path="/waste" element={<WasteAnalyticsPage />} />
+            <Route
+              path="/waste"
+              element={
+                <PermissionRoute
+                  permission={WASTE_VIEW}
+                  element={<WasteAnalyticsPage />}
+                />
+              }
+            />
             <Route
               path="/profitability"
-              element={<ProfitabilityReportsPage />}
+              element={
+                <PermissionRoute
+                  permission={PROFITABILITY_VIEW}
+                  element={<ProfitabilityReportsPage />}
+                />
+              }
             />
-            <Route path="/purchases" element={<PurchaseManagementPage />} />
-            <Route path="/suppliers" element={<SupplierManagementPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/reports/leakage" element={<LeakageReportPage />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/ops/rooms" element={<RoomsDashboard />} />
-            <Route path="/ops/reservations" element={<ReservationsPage />} />
-            <Route path="/ops/housekeeping" element={<HousekeepingBoard />} />
-            <Route path="/ops/cleaner" element={<CleanerMobileView />} />
+            <Route
+              path="/purchases"
+              element={
+                <PermissionRoute
+                  permission={PURCHASES_VIEW}
+                  element={<PurchaseManagementPage />}
+                />
+              }
+            />
+            <Route
+              path="/suppliers"
+              element={
+                <PermissionRoute
+                  permission={SUPPLIERS_VIEW}
+                  element={<SupplierManagementPage />}
+                />
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <PermissionRoute
+                  permission={REPORTS_VIEW}
+                  element={<ReportsPage />}
+                />
+              }
+            />
+            <Route
+              path="/reports/leakage"
+              element={
+                <PermissionRoute
+                  permission={LEAKAGE_VIEW}
+                  element={<LeakageReportPage />}
+                />
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <PermissionRoute
+                  permission={NOTIFICATIONS_VIEW}
+                  element={<NotificationsPage />}
+                />
+              }
+            />
+            <Route
+              path="/ops/rooms"
+              element={
+                <PermissionRoute
+                  permission={ROOMS_VIEW}
+                  element={<RoomsDashboard />}
+                />
+              }
+            />
+            <Route
+              path="/ops/reservations"
+              element={
+                <PermissionRoute
+                  permission={RESERVATIONS_VIEW}
+                  element={<ReservationsPage />}
+                />
+              }
+            />
+            <Route
+              path="/ops/housekeeping"
+              element={
+                <PermissionRoute
+                  permission={HOUSEKEEPING_VIEW}
+                  element={<HousekeepingBoard />}
+                />
+              }
+            />
+            <Route
+              path="/ops/cleaner"
+              element={
+                <PermissionRoute
+                  permission={HOUSEKEEPING_VIEW}
+                  element={<CleanerMobileView />}
+                />
+              }
+            />
             <Route
               path="/ops/late-checkout"
-              element={<LateCheckoutMonitoring />}
+              element={
+                <PermissionRoute
+                  permission={LATE_CHECKOUT_VIEW}
+                  element={<LateCheckoutMonitoring />}
+                />
+              }
             />
             <Route
               path="/employees"
-              element={<PlaceholderPage title="Employees" />}
+              element={
+                <PermissionRoute
+                  permission={EMPLOYEES_VIEW}
+                  element={<PlaceholderPage title="Employees" />}
+                />
+              }
             />
-            <Route path="/workforce/employees" element={<EmployeesPage />} />
+            <Route
+              path="/workforce/employees"
+              element={
+                <PermissionRoute
+                  permission={EMPLOYEES_VIEW}
+                  element={<EmployeesPage />}
+                />
+              }
+            />
             <Route
               path="/workforce/attendance"
-              element={<AttendanceTerminal />}
+              element={
+                <PermissionRoute
+                  permission={ATTENDANCE_VIEW}
+                  element={<AttendanceTerminal />}
+                />
+              }
             />
             <Route
               path="/workforce/reports"
-              element={<AttendanceDashboard />}
+              element={
+                <PermissionRoute
+                  permission={WORKFORCE_REPORTS_VIEW}
+                  element={<AttendanceDashboard />}
+                />
+              }
             />
             <Route
               path="/analytics"
-              element={<ExecutiveFoodOpsDashboardPage />}
+              element={
+                <PermissionRoute
+                  permission={ANALYTICS_VIEW}
+                  element={<ExecutiveFoodOpsDashboardPage />}
+                />
+              }
             />
 
-            <Route path="/kitchen" element={<KitchenDisplayPage />} />
-            <Route element={<RequireAuth />}>
-              <Route path="/pos" element={<ElitePOS />} />
-              <Route path="/orders" element={<PosOrderHistoryPage />} />
-              <Route path="/analytics" element={<PosAnalyticsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Route>
+            <Route
+              path="/kitchen"
+              element={
+                <PermissionRoute
+                  permission={KITCHEN_DISPLAY_VIEW}
+                  element={<KitchenDisplayPage />}
+                />
+              }
+            />
+            <Route
+              path="/pos"
+              element={
+                <PermissionRoute permission={POS_VIEW} element={<ElitePOS />} />
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <PermissionRoute
+                  permission={ORDERS_VIEW}
+                  element={<PosOrderHistoryPage />}
+                />
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <PermissionRoute
+                  permission={SETTINGS_VIEW}
+                  element={<SettingsPage />}
+                />
+              }
+            />
           </Route>
         </Route>
 

@@ -3,7 +3,8 @@ import { Router } from "express";
 import * as inventoryController from "../controllers/inventory.controller.js";
 import { validate } from "../middlewares/validate.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import {
   createInventoryItemSchema,
   createInventoryTransactionSchema,
@@ -24,7 +25,7 @@ inventoryRouter.get(
 );
 inventoryRouter.post(
   "/",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.INVENTORY_CREATE),
   validate(createInventoryItemSchema),
   inventoryController.createItem,
 );
@@ -37,7 +38,7 @@ inventoryRouter.get(
 
 inventoryRouter.post(
   "/transactions",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.INVENTORY_TRANSACTIONS_CREATE),
   validate(createInventoryTransactionSchema),
   inventoryController.createTransaction,
 );
@@ -50,14 +51,14 @@ inventoryRouter.get(
 
 inventoryRouter.patch(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.INVENTORY_UPDATE),
   validate(updateInventoryItemSchema),
   inventoryController.updateItem,
 );
 
 inventoryRouter.delete(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.INVENTORY_DELETE),
   validate(inventoryItemParamsSchema),
   inventoryController.deleteItem,
 );

@@ -2,8 +2,9 @@ import { Router } from "express";
 
 import * as controller from "../controllers/recipeIngredient.controller.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
 import { validate } from "../middlewares/validate.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import {
   addRecipeIngredientSchema,
   listRecipeIngredientsSchema,
@@ -23,21 +24,21 @@ recipeIngredientsRouter.get(
 
 recipeIngredientsRouter.post(
   "/",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.RECIPE_INGREDIENTS_CREATE),
   validate(addRecipeIngredientSchema),
   controller.addIngredient,
 );
 
 recipeIngredientsRouter.patch(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.RECIPE_INGREDIENTS_UPDATE),
   validate(updateRecipeIngredientSchema),
   controller.updateIngredient,
 );
 
 recipeIngredientsRouter.delete(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.RECIPE_INGREDIENTS_DELETE),
   validate(recipeIngredientParamsSchema),
   controller.deleteIngredient,
 );

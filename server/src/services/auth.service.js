@@ -8,6 +8,7 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt.js";
+import { ROLE_PERMISSIONS } from "../constants/rolePermissions.js";
 
 function slugify(input) {
   return String(input)
@@ -84,7 +85,14 @@ function sanitizeUser(user) {
   // (Prisma select below also excludes it, but this is a second guard.)
   // eslint-disable-next-line no-unused-vars
   const { passwordHash, ...safe } = user;
-  return safe;
+
+  // Attach permissions based on role
+  const permissions = ROLE_PERMISSIONS[safe.role] || [];
+
+  return {
+    ...safe,
+    permissions,
+  };
 }
 
 async function issueRefreshToken({ userId, ipAddress, userAgent }) {

@@ -2,8 +2,9 @@ import { Router } from "express";
 
 import * as controller from "../controllers/analyticsInventory.controller.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
 import { validate } from "../middlewares/validate.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import {
   analyticsQuerySchema,
   inventoryForecastQuerySchema,
@@ -15,20 +16,20 @@ analyticsInventoryRouter.use(authMiddleware);
 
 analyticsInventoryRouter.get(
   "/forecast",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.INVENTORY_VIEW),
   validate(inventoryForecastQuerySchema),
   controller.inventoryForecast,
 );
 
 analyticsInventoryRouter.post(
   "/forecast/snapshots",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.INVENTORY_VIEW),
   validate(analyticsQuerySchema),
   controller.generateInventoryForecastSnapshots,
 );
 
 analyticsInventoryRouter.get(
   "/low-stock",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.LOW_STOCK_VIEW),
   controller.lowStock,
 );

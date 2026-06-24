@@ -2,8 +2,9 @@ import { Router } from "express";
 
 import * as recipeController from "../controllers/recipe.controller.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
 import { validate } from "../middlewares/validate.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import {
   createRecipeSchema,
   listRecipesSchema,
@@ -23,7 +24,7 @@ recipesRouter.get(
 
 recipesRouter.post(
   "/",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.RECIPES_CREATE),
   validate(createRecipeSchema),
   recipeController.createRecipe,
 );
@@ -36,21 +37,21 @@ recipesRouter.get(
 
 recipesRouter.patch(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.RECIPES_UPDATE),
   validate(updateRecipeSchema),
   recipeController.updateRecipe,
 );
 
 recipesRouter.post(
   "/:id/recalculate-cost",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.RECIPES_RECALCULATE),
   validate(recipeParamsSchema),
   recipeController.recalcRecipe,
 );
 
 recipesRouter.delete(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.RECIPES_DELETE),
   validate(recipeParamsSchema),
   recipeController.deleteRecipe,
 );

@@ -3,7 +3,8 @@ import { Router } from "express";
 import * as supplierController from "../controllers/supplier.controller.js";
 import { validate } from "../middlewares/validate.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import {
   createSupplierSchema,
   supplierParamsSchema,
@@ -23,21 +24,21 @@ supplierRouter.get(
 
 supplierRouter.post(
   "/",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.SUPPLIERS_CREATE),
   validate(createSupplierSchema),
   supplierController.create,
 );
 
 supplierRouter.patch(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.SUPPLIERS_UPDATE),
   validate(updateSupplierSchema),
   supplierController.update,
 );
 
 supplierRouter.delete(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.SUPPLIERS_DELETE),
   validate(supplierParamsSchema),
   supplierController.remove,
 );

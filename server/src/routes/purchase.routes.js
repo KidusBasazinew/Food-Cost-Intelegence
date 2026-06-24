@@ -3,7 +3,8 @@ import { Router } from "express";
 import * as purchaseController from "../controllers/purchase.controller.js";
 import { validate } from "../middlewares/validate.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import {
   createPurchaseSchema,
   listPurchasesSchema,
@@ -25,14 +26,14 @@ purchaseRouter.get(
 
 purchaseRouter.post(
   "/",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.PURCHASES_CREATE),
   validate(createPurchaseSchema),
   purchaseController.create,
 );
 
 purchaseRouter.patch(
   "/:id",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.PURCHASES_UPDATE),
   validate(updatePurchaseSchema),
   purchaseController.update,
 );

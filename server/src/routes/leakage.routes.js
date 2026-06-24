@@ -1,8 +1,9 @@
 import { Router } from "express";
 
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { roleMiddleware } from "../middlewares/roleMiddleware.js";
+import { permissionMiddleware } from "../middlewares/permissionMiddleware.js";
 import { validate } from "../middlewares/validate.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 import * as controller from "../controllers/leakage.controller.js";
 import { leakageDashboardQuerySchema } from "../validations/leakage.validation.js";
 
@@ -12,7 +13,7 @@ leakageRouter.use(authMiddleware);
 
 leakageRouter.get(
   "/dashboard",
-  roleMiddleware(["SUPER_ADMIN", "ADMIN", "MANAGER"]),
+  permissionMiddleware(PERMISSIONS.LEAKAGE_VIEW),
   validate(leakageDashboardQuerySchema),
   controller.dashboard,
 );
