@@ -19,6 +19,8 @@ import {
   useResetPinMutation,
   useUpdateEmployeeMutation,
   useDisableEmployeeMutation,
+  useShiftsQuery,
+  useCreateShiftMutation,
 } from "@/features/workforce/hooks/useWorkforce";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,7 +43,12 @@ export default function EmployeesPage() {
   const resetMut = useResetPinMutation();
   const disableMut = useDisableEmployeeMutation();
 
+  const shiftsQuery = useShiftsQuery();
+  const createShiftMut = useCreateShiftMutation();
+  const shifts = shiftsQuery.data ?? [];
+
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [shiftDialog, setShiftDialog] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [resetTarget, setResetTarget] = useState(null);
@@ -53,6 +60,14 @@ export default function EmployeesPage() {
     role: "OTHER",
     phone: "",
     pinCode: "",
+    shiftId: "",
+  });
+  const [shiftForm, setShiftForm] = useState({
+    name: "",
+    startTime: "08:00",
+    endTime: "17:00",
+    graceMinutes: 10,
+    color: "#22c55e",
   });
 
   const totalEmployees = q.data?.length ?? 0;
@@ -69,29 +84,39 @@ export default function EmployeesPage() {
       {
         accessorKey: "firstName",
         header: "Name",
-        cell: ({ row }) =>
-          `${row.original.firstName} ${row.original.lastName}`,
+        cell: ({ row }) => `${row.original.firstName} ${row.original.lastName}`,
       },
       { accessorKey: "role", header: "Role" },
       {
         accessorKey: "phone",
-        header: "Phone",
+        header: "Phone/Email",
         cell: ({ row }) => row.original.phone || "—",
       },
       {
-        accessorKey: "isActive",
-        header: "Status",
-        cell: ({ row }) => (
-          <Badge variant={row.original.isActive ? "default" : "secondary"}>
-            {row.original.isActive ? "Active" : "Inactive"}
-          </Badge>
-        ),
+        accessorKey: "shift",
+        header: "Shift",
+        cell: ({ row }) => {
+          const shift = row.original.shift;
+
+          return shift
+            ? `${shift.name} (${shift.startTime}-${shift.endTime})`
+            : "No shift";
+        },
       },
-      {
-        accessorKey: "pinCode",
-        header: "PIN",
-        cell: ({ row }) => maskPin(row.original.pinCode),
-      },
+      // {
+      //   accessorKey: "isActive",
+      //   header: "Status",
+      //   cell: ({ row }) => (
+      //     <Badge variant={row.original.isActive ? "default" : "secondary"}>
+      //       {row.original.isActive ? "Active" : "Inactive"}
+      //     </Badge>
+      //   ),
+      // },
+      // {
+      //   accessorKey: "pinCode",
+      //   header: "PIN",
+      //   cell: ({ row }) => maskPin(row.original.pinCode),
+      // },
       {
         id: "actions",
         header: "Actions",
@@ -156,6 +181,22 @@ export default function EmployeesPage() {
         className="rounded-xl"
         onClick={() => {
           setSelected(null);
+          setShiftForm({
+            name: "",
+            startTime: "08:00",
+            endTime: "17:00",
+          });
+          setShiftDialog(true);
+        }}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        New Shift
+      </Button>
+      <Button
+        variant="secondary"
+        className="rounded-xl"
+        onClick={() => {
+          setSelected(null);
           setForm({
             employeeCode: "",
             firstName: "",
@@ -181,6 +222,7 @@ export default function EmployeesPage() {
       role: form.role,
       phone: form.phone || undefined,
       pinCode: form.pinCode || undefined,
+      shiftId: form.shiftId || null,
     };
     if (selected) {
       await updateMut.mutateAsync({ id: selected.id, input: payload });
@@ -242,6 +284,78 @@ export default function EmployeesPage() {
           emptyDescription="Create an employee to get started."
         />
       </div>
+      <DialogForm
+        open={shiftDialog}
+        onOpenChange={setShiftDialog}
+        title="Create Shift"
+        description="Create employee working schedule"
+        submitLabel="Create Shift"
+        onSubmit={async () => {
+          await createShiftMut.mutateAsync({
+            name: shiftForm.name,
+            startTime: shiftForm.startTime,
+            endTime: shiftForm.endTime,
+            graceMinutes: Number(shiftForm.graceMinutes),
+            color: shiftForm.color,
+          });
+          setShiftDialog(false);
+        }}
+      >
+        <FormSection title="Shift details">
+          <FormField label="Name" fullWidth>
+            <Input
+              value={shiftForm.name}
+              onChange={(e) =>
+                setShiftForm((f) => ({ ...f, name: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Start time">
+            <Input
+              type="time"
+              value={shiftForm.startTime}
+              onChange={(e) =>
+                setShiftForm((f) => ({ ...f, startTime: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="End time">
+            <Input
+              type="time"
+              value={shiftForm.endTime}
+              onChange={(e) =>
+                setShiftForm((f) => ({ ...f, endTime: e.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="Grace minutes">
+            <Input
+              type="number"
+              value={shiftForm.graceMinutes}
+              onChange={(e) =>
+                setShiftForm((f) => ({
+                  ...f,
+                  graceMinutes: e.target.value,
+                }))
+              }
+            />
+          </FormField>
+          <FormRow>
+            <FormField label="Color">
+              <Input
+                type="color"
+                value={shiftForm.color}
+                onChange={(e) =>
+                  setShiftForm((f) => ({
+                    ...f,
+                    color: e.target.value,
+                  }))
+                }
+              />
+            </FormField>
+          </FormRow>
+        </FormSection>
+      </DialogForm>
 
       <DialogForm
         open={dialogOpen}
@@ -316,6 +430,28 @@ export default function EmployeesPage() {
                 </SelectContent>
               </Select>
             </FormField>
+            <FormField label="Shift">
+              <Select
+                value={form.shiftId}
+                onValueChange={(v) =>
+                  setForm((f) => ({
+                    ...f,
+                    shiftId: v,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Assign shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  {shifts.map((shift) => (
+                    <SelectItem key={shift.id} value={shift.id}>
+                      {shift.name}({shift.startTime} - {shift.endTime})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
           </FormRow>
           <FormField label="PIN" fullWidth>
             <Input
@@ -324,7 +460,9 @@ export default function EmployeesPage() {
               onChange={(e) =>
                 setForm((f) => ({ ...f, pinCode: e.target.value }))
               }
-              placeholder={selected ? "Leave blank to keep current PIN" : "4-digit PIN"}
+              placeholder={
+                selected ? "Leave blank to keep current PIN" : "4-digit PIN"
+              }
             />
           </FormField>
         </FormSection>

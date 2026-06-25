@@ -52,29 +52,28 @@ export default function AttendanceTerminal() {
   useEffect(() => {
     if (!pinMutation.isSuccess) return;
     const d = pinMutation.data;
-    const emp = d?.data?.employee;
-    const isCheckout = d?.message === "Checked Out";
-    console.log("PIN RESPONSE", pinMutation.data);
-    setOverlay({
+    const emp = d?.employee;
+    const isCheckout = !!d?.checkOutAt;
+
+    const newOverlay = {
       isCheckout,
       name: emp ? `${emp.firstName} ${emp.lastName}` : "",
       role: emp?.role,
-      time: isCheckout
-        ? formatTime(d?.data?.checkOutAt)
-        : formatTime(d?.data?.checkInAt),
-      worked: isCheckout ? formatWorked(d?.data?.workedMinutes) : null,
-      status: d?.data?.status,
-      lateMinutes: d?.data?.lateMinutes || 0,
-    });
+      time: isCheckout ? formatTime(d?.checkOutAt) : formatTime(d?.checkInAt),
+      worked: isCheckout ? formatWorked(d?.workedMinutes) : null,
+      status: d?.status,
+      lateMinutes: d?.lateMinutes || 0,
+    };
+
+    setOverlay(newOverlay);
     setPin("");
-    console.log(overlay);
 
     const t = setTimeout(() => {
       setOverlay(null);
       pinMutation.reset();
-    }, 3000);
+    }, 10000);
     return () => clearTimeout(t);
-  }, [pinMutation.isSuccess]);
+  }, [pinMutation.data]);
 
   function onPress(d) {
     if (pinMutation.isPending) return;
@@ -84,11 +83,10 @@ export default function AttendanceTerminal() {
   }
 
   function submit() {
-    if (!pin || pin.length < 3) return;
-    if (!hotelId) return;
+    console.log("SUBMITTING PIN");
+
     pinMutation.mutate({ hotelId, branchId, pin });
   }
-
   const busy = pinMutation.isPending;
 
   const isLate =

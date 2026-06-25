@@ -24,24 +24,43 @@ export const pinSchema = {
 export const createEmployeeSchema = {
   body: z.object({
     employeeCode: z.string().min(1),
+
     firstName: z.string().min(1),
+
     lastName: z.string().min(1),
+
     role: EmployeeRole,
+
     phone: z.string().optional(),
+
     pinCode: z.string().min(3),
+
     hireDate: z.string().optional(),
+
+    shiftId: z.string().uuid().optional(),
+
     isActive: z.boolean().optional(),
   }),
 };
 
 export const updateEmployeeSchema = {
-  params: z.object({ id: z.string().uuid() }),
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+
   body: z.object({
     firstName: z.string().optional(),
+
     lastName: z.string().optional(),
+
     role: EmployeeRole.optional(),
+
     phone: z.string().optional(),
+
     pinCode: z.string().min(3).optional(),
+
+    shiftId: z.string().uuid().nullable().optional(),
+
     isActive: z.boolean().optional(),
   }),
 };
@@ -65,21 +84,46 @@ export const resetPinSchema = {
   body: z.object({ newPin: z.string().min(3) }),
 };
 
-export const createScheduleSchema = {
+export const ShiftType = z.enum(["MORNING", "EVENING", "NIGHT", "CUSTOM"]);
+
+export const createShiftSchema = {
   body: z.object({
     name: z.string().min(1),
+
     startTime: z.string().regex(/^\d{2}:\d{2}$/),
+
     endTime: z.string().regex(/^\d{2}:\d{2}$/),
+
     graceMinutes: z.number().int().min(0).max(120).optional(),
+
+    color: z.string().optional(),
+
+    isActive: z.boolean().optional(),
   }),
 };
 
-export const updateScheduleSchema = {
-  params: z.object({ id: z.string().uuid() }),
+export const updateShiftSchema = {
+  params: z.object({
+    id: z.string().uuid(),
+  }),
+
   body: z.object({
     name: z.string().min(1).optional(),
-    startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-    endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+
+    startTime: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .optional(),
+
+    endTime: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .optional(),
+
     graceMinutes: z.number().int().min(0).max(120).optional(),
+
+    color: z.string().optional(),
+
+    isActive: z.boolean().optional(),
   }),
 };

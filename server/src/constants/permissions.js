@@ -97,10 +97,10 @@ export const PERMISSIONS = {
   ATTENDANCE_TERMINAL: "attendance.terminal",
   ATTENDANCE_MANAGE: "attendance.manage",
 
-  SCHEDULES_VIEW: "schedules.view",
-  SCHEDULES_CREATE: "schedules.create",
-  SCHEDULES_UPDATE: "schedules.update",
-  SCHEDULES_DELETE: "schedules.delete",
+  SHIFTS_VIEW: "shifts.view",
+  SHIFTS_CREATE: "shifts.create",
+  SHIFTS_UPDATE: "shifts.update",
+  SHIFTS_DELETE: "shifts.delete",
 
   WORKFORCE_REPORTS_VIEW: "workforce.reports.view",
 

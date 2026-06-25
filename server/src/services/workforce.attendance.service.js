@@ -8,12 +8,6 @@ function startOfDay(d) {
   return s;
 }
 
-function endOfDay(d) {
-  const e = startOfDay(d);
-  e.setDate(e.getDate() + 1);
-  return e;
-}
-
 function parseTimeToDate(timeStr, baseDate) {
   const [h, m] = timeStr.split(":").map((v) => parseInt(v, 10));
   const d = new Date(baseDate);
@@ -21,68 +15,87 @@ function parseTimeToDate(timeStr, baseDate) {
   return d;
 }
 
+function buildShiftWindow(shift, now) {
+  const todayStart = startOfDay(now);
+
+  let shiftStart = parseTimeToDate(shift.startTime, todayStart);
+
+  let shiftEnd = parseTimeToDate(shift.endTime, todayStart);
+
+  if (shiftEnd <= shiftStart) {
+    shiftEnd.setDate(shiftEnd.getDate() + 1);
+
+    // after midnight, still belongs to yesterday's shift
+    if (now < shiftEnd) {
+      shiftStart.setDate(shiftStart.getDate() - 1);
+    }
+  }
+
+  return {
+    shiftStart,
+    shiftEnd,
+  };
+}
+
 export async function handlePin({ pin, hotelId, branchId, actor } = {}) {
   if (!pin) throw new ApiError(400, "INVALID_PIN", "Missing PIN");
   if (!hotelId) throw new ApiError(400, "MISSING_HOTEL", "Missing hotelId");
 
   const employee = await prisma.employee.findFirst({
-    where: { pinCode: pin, hotelId, isActive: true },
+    where: {
+      pinCode: pin,
+      hotelId,
+      isActive: true,
+    },
+    include: {
+      shift: true,
+    },
   });
 
   if (!employee) throw new ApiError(404, "NOT_FOUND", "Employee not found");
+  if (!employee.shift) {
+    throw new ApiError(
+      400,
+      "SHIFT_NOT_ASSIGNED",
+      "Employee has no assigned shift",
+    );
+  }
 
+  const shift = employee.shift;
   const now = new Date();
-  const todayStart = startOfDay(now);
-  const todayEnd = endOfDay(now);
 
-  // Find attendance record started within the current calendar day boundary
+  // Dynamically build windows based on shift parameters
+  const { shiftStart, shiftEnd } = buildShiftWindow(shift, now);
+  const grace = shift.graceMinutes ?? 10;
+
+  // Find an active open session (has open attendance)
   const existing = await prisma.attendanceRecord.findFirst({
     where: {
       employeeId: employee.id,
-      date: { gte: todayStart, lt: todayEnd },
+      checkOutAt: null,
     },
-    orderBy: [{ createdAt: "asc" }],
+    orderBy: {
+      createdAt: "desc",
+    },
   });
 
-  const schedule =
-    (await prisma.workSchedule.findFirst({
-      where: { hotelId },
-      orderBy: [{ createdAt: "asc" }],
-    })) ?? null;
-
-  const scheduleStart = schedule
-    ? parseTimeToDate(schedule.startTime, todayStart)
-    : parseTimeToDate("08:00", todayStart);
-
-  let scheduleEnd = schedule
-    ? parseTimeToDate(schedule.endTime, todayStart)
-    : parseTimeToDate("17:00", todayStart);
-
-  // Fix Cross-Day/Night Shift Edge Case
-  if (scheduleEnd <= scheduleStart) {
-    scheduleEnd.setDate(scheduleEnd.getDate() + 1);
-  }
-
-  const grace = schedule ? (schedule.graceMinutes ?? 10) : 10;
-
+  // ==========================================
+  // CASE 1: NEW CHECK-IN (No active open session)
+  // ==========================================
   if (!existing) {
-    // Calculate accurate late minutes relative to shift start line
-    const diffMs = now - scheduleStart;
+    const diffMs = now - shiftStart;
     const diffMinutes =
       diffMs > 0 ? Math.max(0, Math.round(diffMs / 60_000)) : 0;
-
-    console.log({
-      diffMinutes,
-      grace,
-      lateMinutesCandidate: diffMinutes > grace ? diffMinutes - grace : 0,
-    });
     const lateMinutes = diffMinutes > grace ? diffMinutes - grace : 0;
     const status = lateMinutes > 0 ? "LATE" : "PRESENT";
 
     const created = await prisma.attendanceRecord.create({
       data: {
         employeeId: employee.id,
-        date: todayStart,
+        shiftId: shift.id,
+        date: shiftStart,
+        scheduledStart: shiftStart,
+        scheduledEnd: shiftEnd,
         checkInAt: now,
         lateMinutes,
         status,
@@ -120,21 +133,25 @@ export async function handlePin({ pin, hotelId, branchId, actor } = {}) {
     };
   }
 
-  // Absent record from noon job — afternoon arrival is a check-in, not checkout
-  if (
-    existing &&
-    !existing.checkInAt &&
-    (existing.status === "ABSENT" || !existing.checkOutAt)
-  ) {
-    const diffMs = now - scheduleStart;
+  // ===============================f==========================================
+  // CASE 2: RE-CHECKIN FOR AN ABSENT CONSTRAINED RECORD (Open session fallback)
+  // =========================================================================
+  if (existing && !existing.checkInAt && existing.status === "ABSENT") {
+    const diffMs = now - shiftStart;
     const diffMinutes =
       diffMs > 0 ? Math.max(0, Math.round(diffMs / 60_000)) : 0;
     const lateMinutes = diffMinutes > grace ? diffMinutes - grace : 0;
     const status = lateMinutes > 0 ? "LATE" : "PRESENT";
 
     const updated = await prisma.attendanceRecord.update({
-      where: { id: existing.id },
+      where: {
+        id: existing.id,
+      },
       data: {
+        shiftId: shift.id,
+        date: shiftStart,
+        scheduledStart: shiftStart,
+        scheduledEnd: shiftEnd,
         checkInAt: now,
         lateMinutes,
         status,
@@ -172,11 +189,17 @@ export async function handlePin({ pin, hotelId, branchId, actor } = {}) {
     };
   }
 
+  // ==========================================
+  // CASE 3: CHECK-OUT (Active open session found)
+  // ==========================================
   if (existing && !existing.checkOutAt) {
     const checkInAt = existing.checkInAt ?? now;
     const workedMinutes = Math.max(0, Math.round((now - checkInAt) / 60_000));
 
-    const overtimeMs = now - scheduleEnd;
+    // Calculate overtime using the runtime snapshot from the database record
+    const overtimeMs = existing.scheduledEnd
+      ? now - new Date(existing.scheduledEnd)
+      : 0;
     const overtimeMinutes =
       overtimeMs > 0 ? Math.max(0, Math.round(overtimeMs / 60_000)) : 0;
 
@@ -222,6 +245,7 @@ export async function handlePin({ pin, hotelId, branchId, actor } = {}) {
     };
   }
 
+  // Fallback protective return
   return {
     message: "Already checked out",
     data: {

@@ -66,3 +66,47 @@ export function useEmployeeSummariesQuery(params = {}, options = {}) {
     ...options,
   });
 }
+
+export function useShiftsQuery(options = {}) {
+  return useQuery({
+    queryKey: ["workforce", "shifts"],
+    queryFn: () => workforceApi.listShifts(),
+    ...options,
+  });
+}
+
+export function useCreateShiftMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => workforceApi.createShift(input),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["workforce", "shifts"],
+      });
+    },
+  });
+}
+
+export function useUpdateShiftMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }) => workforceApi.updateShift(id, input),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["workforce", "shifts"],
+      });
+    },
+  });
+}
+
+export function useDeleteShiftMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => workforceApi.deleteShift(id),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["workforce", "shifts"],
+      });
+    },
+  });
+}

@@ -17,10 +17,13 @@ export const workforceApi = {
     http.patch(`/workforce/employees/${id}`, input).then((r) => r.data.data),
   disableEmployee: (id) =>
     http.patch(`/workforce/employees/${id}/disable`).then((r) => r.data),
-  listSchedules: () =>
-    http.get("/workforce/schedules").then((r) => r.data.data),
-  createSchedule: (input) =>
-    http.post("/workforce/schedules", input).then((r) => r.data.data),
+  listShifts: () => http.get("/workforce/shifts").then((r) => r.data.data),
+  createShift: (input) =>
+    http.post("/workforce/shifts", input).then((r) => r.data.data),
+  updateShift: (id, input) =>
+    http.patch(`/workforce/shifts/${id}`, input).then((r) => r.data.data),
+  deleteShift: (id) =>
+    http.delete(`/workforce/shifts/${id}`).then((r) => r.data.data),
   employeeSummaries: (params) =>
     http.get("/workforce/reports/summary", { params }).then((r) => r.data.data),
 };

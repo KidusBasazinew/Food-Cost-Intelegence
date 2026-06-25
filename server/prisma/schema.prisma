@@ -53,14 +53,14 @@ model Hotel {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  branches Branch[]
-  users    User[]
-  employees Employee[]
-  workSchedules WorkSchedule[]
+  branches              Branch[]
+  users                 User[]
+  employees             Employee[]
+  shifts                Shift[]
   inventoryItems        InventoryItem[]
   inventoryTransactions InventoryTransaction[]
   suppliers             Supplier[]
-  purchases              Purchase[]
+  purchases             Purchase[]
   recipes               Recipe[]
   inventoryConsumptions InventoryConsumption[]
   salesOrders           SalesOrder[]
@@ -87,25 +87,25 @@ model Branch {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  users User[]
-  employees Employee[]
-  inventoryItems        InventoryItem[]
-  inventoryTransactions InventoryTransaction[]
-  suppliers             Supplier[]
-  purchases              Purchase[]
-  recipes               Recipe[]
-  inventoryConsumptions InventoryConsumption[]
-  salesOrders           SalesOrder[]
-  menuAnalyticsSnapshots MenuAnalyticsSnapshot[]
+  hotel                      Hotel                       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  users                      User[]
+  employees                  Employee[]
+  inventoryItems             InventoryItem[]
+  inventoryTransactions      InventoryTransaction[]
+  suppliers                  Supplier[]
+  purchases                  Purchase[]
+  recipes                    Recipe[]
+  inventoryConsumptions      InventoryConsumption[]
+  salesOrders                SalesOrder[]
+  menuAnalyticsSnapshots     MenuAnalyticsSnapshot[]
   inventoryForecastSnapshots InventoryForecastSnapshot[]
-  notifications         Notification[]
-  posOrders             PosOrder[]
-  stockMovements        StockMovement[]
-  stockCounts           StockCount[]
-  rooms                 Room[]
-  reservations          Reservation[]
-  housekeepingTasks     HousekeepingTask[]
+  notifications              Notification[]
+  posOrders                  PosOrder[]
+  stockMovements             StockMovement[]
+  stockCounts                StockCount[]
+  rooms                      Room[]
+  reservations               Reservation[]
+  housekeepingTasks          HousekeepingTask[]
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -127,12 +127,12 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  hotel        Hotel        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  refreshTokens RefreshToken[]
+  hotel                        Hotel                  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch                       Branch?                @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  refreshTokens                RefreshToken[]
   inventoryTransactionsCreated InventoryTransaction[] @relation("InventoryTransactionCreatedBy")
-  purchasesCreated              Purchase[]            @relation("PurchaseCreatedBy")
-  notifications                 Notification[]
+  purchasesCreated             Purchase[]             @relation("PurchaseCreatedBy")
+  notifications                Notification[]
   assignedHousekeepingTasks    HousekeepingTask[]
 
   @@index([hotelId])
@@ -327,9 +327,9 @@ model MeasurementUnit {
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
-  inventoryItems   InventoryItem[]     @relation("InventoryItemBaseUnit")
-  inventoryTxns    InventoryTransaction[]
-  purchaseItems    PurchaseItem[]
+  inventoryItems    InventoryItem[]        @relation("InventoryItemBaseUnit")
+  inventoryTxns     InventoryTransaction[]
+  purchaseItems     PurchaseItem[]
   recipeIngredients RecipeIngredient[]
 
   @@unique([baseType, symbol])
@@ -338,28 +338,28 @@ model MeasurementUnit {
 }
 
 model InventoryItem {
-  id                        String            @id @default(uuid())
-  hotelId                   String
-  branchId                  String?
-  name                      String
-  sku                       String?
-  category                  InventoryCategory @default(OTHER)
-  baseUnitId                String
-  quantityInStock           Decimal           @default(0)
-  averageCostPerBaseUnitCents Decimal          @default(0)
-  minimumStockLevel         Decimal           @default(0)
-  createdAt                 DateTime          @default(now())
-  updatedAt                 DateTime          @updatedAt
+  id                          String            @id @default(uuid())
+  hotelId                     String
+  branchId                    String?
+  name                        String
+  sku                         String?
+  category                    InventoryCategory @default(OTHER)
+  baseUnitId                  String
+  quantityInStock             Decimal           @default(0)
+  averageCostPerBaseUnitCents Decimal           @default(0)
+  minimumStockLevel           Decimal           @default(0)
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
 
-  hotel       Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch      Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  baseUnit    MeasurementUnit  @relation("InventoryItemBaseUnit", fields: [baseUnitId], references: [id], onDelete: Restrict)
-  transactions InventoryTransaction[]
-  purchaseItems PurchaseItem[]
-  recipeIngredients RecipeIngredient[]
-  consumptions InventoryConsumption[]
-  stockMovements StockMovement[]
-  stockCountItems StockCountItem[]
+  hotel                      Hotel                       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch                     Branch?                     @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  baseUnit                   MeasurementUnit             @relation("InventoryItemBaseUnit", fields: [baseUnitId], references: [id], onDelete: Restrict)
+  transactions               InventoryTransaction[]
+  purchaseItems              PurchaseItem[]
+  recipeIngredients          RecipeIngredient[]
+  consumptions               InventoryConsumption[]
+  stockMovements             StockMovement[]
+  stockCountItems            StockCountItem[]
   inventoryForecastSnapshots InventoryForecastSnapshot[]
 
   @@index([hotelId])
@@ -369,32 +369,32 @@ model InventoryItem {
 }
 
 model Recipe {
-  id                    String       @id @default(uuid())
-  hotelId               String
-  branchId              String?
-  menuItemId            String?
-  name                  String
-  description           String?
-  imageUrl              String?
-  category              RecipeCategory @default(OTHER)
-  yieldQuantity         Decimal      @default(1)
-  yieldUnit             RecipeYieldUnit @default(PORTION)
+  id                      String          @id @default(uuid())
+  hotelId                 String
+  branchId                String?
+  menuItemId              String?
+  name                    String
+  description             String?
+  imageUrl                String?
+  category                RecipeCategory  @default(OTHER)
+  yieldQuantity           Decimal         @default(1)
+  yieldUnit               RecipeYieldUnit @default(PORTION)
   preparationInstructions String?
-  status                RecipeStatus @default(ACTIVE)
-  totalCostCents        Decimal      @default(0)
-  sellingPriceCents     Decimal      @default(0)
-  estimatedProfitCents  Decimal      @default(0)
-  estimatedProfitMargin Decimal      @default(0)
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
+  status                  RecipeStatus    @default(ACTIVE)
+  totalCostCents          Decimal         @default(0)
+  sellingPriceCents       Decimal         @default(0)
+  estimatedProfitCents    Decimal         @default(0)
+  estimatedProfitMargin   Decimal         @default(0)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
 
-  hotel     Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch    Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
-  ingredients  RecipeIngredient[]
-  consumptions InventoryConsumption[]
-  salesOrderItems SalesOrderItem[]
-  posOrderItems PosOrderItem[]
+  ingredients            RecipeIngredient[]
+  consumptions           InventoryConsumption[]
+  salesOrderItems        SalesOrderItem[]
+  posOrderItems          PosOrderItem[]
   menuAnalyticsSnapshots MenuAnalyticsSnapshot[]
 
   @@index([hotelId])
@@ -405,21 +405,21 @@ model Recipe {
 }
 
 model RecipeIngredient {
-  id                  String   @id @default(uuid())
-  recipeId            String
-  inventoryItemId     String
-  quantity            Decimal
-  unitId              String
-  quantityInBaseUnit  Decimal
-  costPerBaseUnitCents Decimal @default(0)
-  totalCostCents      Decimal  @default(0)
-  notes               String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  recipeId             String
+  inventoryItemId      String
+  quantity             Decimal
+  unitId               String
+  quantityInBaseUnit   Decimal
+  costPerBaseUnitCents Decimal  @default(0)
+  totalCostCents       Decimal  @default(0)
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  recipe        Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  inventoryItem InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
-  unit          MeasurementUnit @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  recipe        Recipe                 @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem          @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  unit          MeasurementUnit        @relation(fields: [unitId], references: [id], onDelete: Restrict)
   consumptions  InventoryConsumption[]
 
   @@index([recipeId])
@@ -428,27 +428,27 @@ model RecipeIngredient {
 }
 
 model InventoryConsumption {
-  id                     String                @id @default(uuid())
-  hotelId                String
-  branchId               String?
-  recipeId               String?
-  recipeIngredientId     String?
-  inventoryItemId        String
-  posOrderId              String?
-  sourceType             ConsumptionSourceType
-  sourceId               String?
-  quantityConsumed       Decimal
+  id                       String                @id @default(uuid())
+  hotelId                  String
+  branchId                 String?
+  recipeId                 String?
+  recipeIngredientId       String?
+  inventoryItemId          String
+  posOrderId               String?
+  sourceType               ConsumptionSourceType
+  sourceId                 String?
+  quantityConsumed         Decimal
   quantityConsumedBaseUnit Decimal
-  unitCostCents          Decimal
-  totalCostCents         Decimal
-  createdAt              DateTime              @default(now())
+  unitCostCents            Decimal
+  totalCostCents           Decimal
+  createdAt                DateTime              @default(now())
 
-  hotel         Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  recipe        Recipe?        @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  hotel            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch           Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  recipe           Recipe?           @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   recipeIngredient RecipeIngredient? @relation(fields: [recipeIngredientId], references: [id], onDelete: SetNull)
-  inventoryItem InventoryItem  @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
-  posOrder      PosOrder?      @relation(fields: [posOrderId], references: [id], onDelete: SetNull)
+  inventoryItem    InventoryItem     @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  posOrder         PosOrder?         @relation(fields: [posOrderId], references: [id], onDelete: SetNull)
 
   @@index([hotelId])
   @@index([branchId])
@@ -461,30 +461,30 @@ model InventoryConsumption {
 }
 
 model PosOrder {
-  id                 String         @id @default(uuid())
-  hotelId            String
-  branchId           String?
-  orderNumber        String         @unique
-  tableNumber        Int
-  waiterName         String
-  customerCount      Int            @default(1)
+  id            String  @id @default(uuid())
+  hotelId       String
+  branchId      String?
+  orderNumber   String  @unique
+  tableNumber   Int
+  waiterName    String
+  customerCount Int     @default(1)
 
-  subtotalCents       Decimal        @default(0)
-  taxCents            Decimal        @default(0)
-  serviceChargeCents  Decimal        @default(0)
-  totalCents          Decimal        @default(0)
+  subtotalCents      Decimal @default(0)
+  taxCents           Decimal @default(0)
+  serviceChargeCents Decimal @default(0)
+  totalCents         Decimal @default(0)
 
-  status             PosOrderStatus @default(DRAFT)
-  notes              String?
+  status PosOrderStatus @default(DRAFT)
+  notes  String?
 
-  sentToKitchenAt    DateTime?
-  completedAt        DateTime?
+  sentToKitchenAt DateTime?
+  completedAt     DateTime?
 
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  hotel        Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch       Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   items        PosOrderItem[]
   consumptions InventoryConsumption[]
@@ -496,20 +496,20 @@ model PosOrder {
 }
 
 model PosOrderItem {
-  id              String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  orderId         String
-  recipeId        String
+  orderId  String
+  recipeId String
 
   quantity        Decimal
   unitPriceCents  Decimal
   totalPriceCents Decimal
 
-  notes           String?
-  createdAt       DateTime @default(now())
+  notes     String?
+  createdAt DateTime @default(now())
 
-  order           PosOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  order  PosOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recipe Recipe   @relation(fields: [recipeId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
   @@index([recipeId])
@@ -517,29 +517,29 @@ model PosOrderItem {
 }
 
 model StockMovement {
-  id               String            @id @default(uuid())
+  id String @id @default(uuid())
 
-  hotelId          String
-  branchId         String?
-  inventoryItemId  String
-  type             StockMovementType
+  hotelId         String
+  branchId        String?
+  inventoryItemId String
+  type            StockMovementType
 
-  quantityBefore   Decimal
-  quantityChanged  Decimal
-  quantityAfter    Decimal
+  quantityBefore  Decimal
+  quantityChanged Decimal
+  quantityAfter   Decimal
 
-  unitCostCents    Decimal?
-  totalCostCents   Decimal?
+  unitCostCents  Decimal?
+  totalCostCents Decimal?
 
-  referenceType    String?
-  referenceId      String?
-  notes            String?
+  referenceType String?
+  referenceId   String?
+  notes         String?
 
-  createdAt        DateTime          @default(now())
+  createdAt DateTime @default(now())
 
-  hotel         Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  inventoryItem InventoryItem  @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  hotel         Hotel         @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch        Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
 
   @@index([inventoryItemId])
   @@index([type])
@@ -547,28 +547,28 @@ model StockMovement {
 }
 
 model InventoryTransaction {
-  id                     String                   @id @default(uuid())
-  hotelId                String
-  branchId               String?
-  inventoryItemId        String
-  type                   InventoryTransactionType
-  quantity               Decimal
-  unitId                 String
-  quantityInBaseUnit     Decimal
+  id                       String                   @id @default(uuid())
+  hotelId                  String
+  branchId                 String?
+  inventoryItemId          String
+  type                     InventoryTransactionType
+  quantity                 Decimal
+  unitId                   String
+  quantityInBaseUnit       Decimal
   unitCostPerBaseUnitCents Decimal?
-  totalCostCents         Decimal?
-  referenceType          String?
-  referenceId            String?
-  note                   String?
-  createdByUserId        String?
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
+  totalCostCents           Decimal?
+  referenceType            String?
+  referenceId              String?
+  note                     String?
+  createdByUserId          String?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
 
-  hotel         Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch        Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  inventoryItem InventoryItem    @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
-  unit          MeasurementUnit  @relation(fields: [unitId], references: [id], onDelete: Restrict)
-  createdBy     User?            @relation("InventoryTransactionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  hotel         Hotel           @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch        Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  inventoryItem InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  unit          MeasurementUnit @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  createdBy     User?           @relation("InventoryTransactionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([hotelId])
   @@index([branchId])
@@ -588,8 +588,8 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  hotel     Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  hotel     Hotel      @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch    Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
   purchases Purchase[]
 
   @@index([hotelId])
@@ -598,26 +598,26 @@ model Supplier {
 }
 
 model Purchase {
-  id            String        @id @default(uuid())
-  hotelId       String
-  branchId      String?
-  supplierId    String
-  status        PurchaseStatus @default(DRAFT)
-  orderedAt     DateTime?
-  expectedAt    DateTime?
-  receivedAt    DateTime?
-  notes         String?
+  id              String         @id @default(uuid())
+  hotelId         String
+  branchId        String?
+  supplierId      String
+  status          PurchaseStatus @default(DRAFT)
+  orderedAt       DateTime?
+  expectedAt      DateTime?
+  receivedAt      DateTime?
+  notes           String?
   createdByUserId String?
-  subtotalCents Decimal       @default(0)
-  taxCents      Decimal       @default(0)
-  totalCents    Decimal       @default(0)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  subtotalCents   Decimal        @default(0)
+  taxCents        Decimal        @default(0)
+  totalCents      Decimal        @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  hotel     Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  supplier  Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict)
-  createdBy User?     @relation("PurchaseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  hotel     Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch    Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  supplier  Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  createdBy User?          @relation("PurchaseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   items     PurchaseItem[]
 
   @@index([hotelId])
@@ -628,16 +628,16 @@ model Purchase {
 }
 
 model PurchaseItem {
-  id               String   @id @default(uuid())
-  purchaseId       String
-  inventoryItemId  String
-  unitId           String
-  quantity         Decimal
+  id                 String   @id @default(uuid())
+  purchaseId         String
+  inventoryItemId    String
+  unitId             String
+  quantity           Decimal
   quantityInBaseUnit Decimal
-  unitCostCents    Decimal
-  totalCostCents   Decimal
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  unitCostCents      Decimal
+  totalCostCents     Decimal
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   purchase      Purchase        @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   inventoryItem InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
@@ -672,18 +672,18 @@ enum SalesOrderStatus {
 }
 
 model SalesOrder {
-  id        String           @id @default(uuid())
-  hotelId   String
-  branchId  String?
-  status    SalesOrderStatus @default(COMPLETED)
-  orderedAt DateTime         @default(now())
-  totalRevenueCents Decimal  @default(0)
-  metadata  Json?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id                String           @id @default(uuid())
+  hotelId           String
+  branchId          String?
+  status            SalesOrderStatus @default(COMPLETED)
+  orderedAt         DateTime         @default(now())
+  totalRevenueCents Decimal          @default(0)
+  metadata          Json?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
-  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  hotel  Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
   items  SalesOrderItem[]
 
   @@index([hotelId])
@@ -694,14 +694,14 @@ model SalesOrder {
 }
 
 model SalesOrderItem {
-  id            String   @id @default(uuid())
-  salesOrderId  String
-  recipeId      String
-  quantity      Decimal
-  unitPriceCents Decimal
+  id                String   @id @default(uuid())
+  salesOrderId      String
+  recipeId          String
+  quantity          Decimal
+  unitPriceCents    Decimal
   totalRevenueCents Decimal
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
   recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Restrict)
@@ -737,14 +737,14 @@ model MenuAnalyticsSnapshot {
 }
 
 model InventoryForecastSnapshot {
-  id                    String   @id @default(uuid())
-  inventoryItemId       String
-  branchId              String
-  averageDailyConsumption Decimal @default(0)
-  estimatedDaysRemaining Decimal @default(0)
-  projectedWeeklyUsage  Decimal @default(0)
-  projectedMonthlyUsage Decimal @default(0)
-  createdAt             DateTime @default(now())
+  id                      String   @id @default(uuid())
+  inventoryItemId         String
+  branchId                String
+  averageDailyConsumption Decimal  @default(0)
+  estimatedDaysRemaining  Decimal  @default(0)
+  projectedWeeklyUsage    Decimal  @default(0)
+  projectedMonthlyUsage   Decimal  @default(0)
+  createdAt               DateTime @default(now())
 
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
   branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -764,18 +764,18 @@ enum StockCountStatus {
 }
 
 model StockCount {
-  id        String           @id @default(uuid())
+  id String @id @default(uuid())
 
-  hotelId   String
-  branchId  String?
+  hotelId  String
+  branchId String?
 
-  status    StockCountStatus @default(DRAFT)
+  status StockCountStatus @default(DRAFT)
 
   countedBy String?
   notes     String?
   countedAt DateTime?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
@@ -790,14 +790,14 @@ model StockCount {
 }
 
 model StockCountItem {
-  id               String  @id @default(uuid())
+  id String @id @default(uuid())
 
-  stockCountId     String
-  inventoryItemId  String
+  stockCountId    String
+  inventoryItemId String
 
-  systemQuantity   Decimal
-  physicalQuantity Decimal
-  varianceQuantity Decimal
+  systemQuantity     Decimal
+  physicalQuantity   Decimal
+  varianceQuantity   Decimal
   variancePercentage Decimal
 
   stockCount    StockCount    @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
@@ -843,24 +843,24 @@ enum HousekeepingTaskKind {
 }
 
 model Room {
-  id        String     @id @default(uuid())
-  hotelId   String
-  branchId  String?
+  id       String  @id @default(uuid())
+  hotelId  String
+  branchId String?
 
   roomNumber String
   floor      Int?
 
-  status    RoomStatus @default(VACANT)
-  isActive  Boolean    @default(true)
+  status   RoomStatus @default(VACANT)
+  isActive Boolean    @default(true)
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  reservations        Reservation[]
-  housekeepingTasks   HousekeepingTask[]
+  reservations      Reservation[]
+  housekeepingTasks HousekeepingTask[]
 
-  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch  Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   @@unique([hotelId, branchId, roomNumber])
   @@index([hotelId])
@@ -869,33 +869,33 @@ model Room {
 }
 
 model Reservation {
-  id        String            @id @default(uuid())
-  hotelId   String
-  branchId  String?
+  id       String  @id @default(uuid())
+  hotelId  String
+  branchId String?
 
-  roomId    String
-  room      Room              @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Restrict)
 
   guestName  String
   guestPhone String?
   guestEmail String?
 
-  status     ReservationStatus @default(RESERVED)
+  status ReservationStatus @default(RESERVED)
 
-  checkInAt  DateTime?
-  checkOutAt DateTime?
+  checkInAt        DateTime?
+  checkOutAt       DateTime?
   actualCheckOutAt DateTime?
 
-  lateCheckoutFeeCents Int     @default(0)
+  lateCheckoutFeeCents Int @default(0)
 
-  notes      String?
+  notes String?
 
   housekeepingTasks HousekeepingTask[]
 
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  hotel  Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   @@index([hotelId])
@@ -905,21 +905,21 @@ model Reservation {
 }
 
 model HousekeepingTask {
-  id        String           @id @default(uuid())
-  hotelId   String
-  branchId  String?
+  id       String  @id @default(uuid())
+  hotelId  String
+  branchId String?
 
-  roomId    String
-  room      Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   reservationId String?
-  reservation   Reservation?  @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  reservation   Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
 
-  kind      HousekeepingTaskKind @default(CLEANING)
-  status    HousekeepingStatus   @default(PENDING)
+  kind   HousekeepingTaskKind @default(CLEANING)
+  status HousekeepingStatus   @default(PENDING)
 
   assignedUserId String?
-  assignedUser   User?             @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+  assignedUser   User?   @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
 
   checkedInAt DateTime?
   completedAt DateTime?
@@ -929,7 +929,7 @@ model HousekeepingTask {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  hotel  Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   @@index([hotelId])
@@ -959,13 +959,15 @@ enum EmployeeRole {
 model Employee {
   id String @id @default(uuid())
 
-  hotelId String
+  hotelId  String
   branchId String?
+
+  shiftId String?
 
   employeeCode String @unique
 
   firstName String
-  lastName String
+  lastName  String
 
   role EmployeeRole
 
@@ -980,8 +982,10 @@ model Employee {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  shift Shift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
 
   attendanceRecords AttendanceRecord[]
 
@@ -990,7 +994,7 @@ model Employee {
   @@index([isActive])
 }
 
-model WorkSchedule {
+model Shift {
   id String @id @default(uuid())
 
   hotelId String
@@ -998,15 +1002,24 @@ model WorkSchedule {
   name String
 
   startTime String
-  endTime String
+  endTime   String
 
   graceMinutes Int @default(10)
 
+  isActive Boolean @default(true)
+
+  color String?
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
+  employees         Employee[]
+  attendanceRecords AttendanceRecord[]
+
   @@index([hotelId])
+  @@index([isActive])
 }
 
 enum AttendanceStatus {
@@ -1021,9 +1034,14 @@ model AttendanceRecord {
 
   employeeId String
 
+  shiftId String?
+
   date DateTime
 
-  checkInAt DateTime?
+  scheduledStart DateTime?
+  scheduledEnd   DateTime?
+
+  checkInAt  DateTime?
   checkOutAt DateTime?
 
   workedMinutes Int @default(0)
@@ -1040,7 +1058,9 @@ model AttendanceRecord {
 
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
+  shift Shift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
   @@index([employeeId])
+  @@index([shiftId])
   @@index([date])
 }
-

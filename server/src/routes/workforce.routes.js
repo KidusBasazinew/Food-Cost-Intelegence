@@ -12,10 +12,10 @@ import {
   updateEmployeeSchema,
   listEmployeesSchema,
   resetPinSchema,
-  createScheduleSchema,
-  updateScheduleSchema,
+  createShiftSchema,
+  updateShiftSchema,
 } from "../validations/workforce.validation.js";
-import * as scheduleController from "../controllers/workforce.schedule.controller.js";
+import * as shiftController from "../controllers/workforce.shift.controller.js";
 import * as reportsController from "../controllers/workforce.reports.controller.js";
 
 export const workforceRouter = Router();
@@ -60,28 +60,30 @@ workforceRouter.post(
   validate(resetPinSchema),
   employeesController.resetPin,
 );
-
 workforceRouter.get(
-  "/schedules",
-  permissionMiddleware(PERMISSIONS.SCHEDULES_VIEW),
-  scheduleController.listSchedules,
+  "/shifts",
+  permissionMiddleware(PERMISSIONS.SHIFTS_VIEW),
+  shiftController.listShifts,
 );
+
 workforceRouter.post(
-  "/schedules",
-  permissionMiddleware(PERMISSIONS.SCHEDULES_CREATE),
-  validate(createScheduleSchema),
-  scheduleController.createSchedule,
+  "/shifts",
+  permissionMiddleware(PERMISSIONS.SHIFTS_CREATE),
+  validate(createShiftSchema),
+  shiftController.createShift,
 );
+
 workforceRouter.patch(
-  "/schedules/:id",
-  permissionMiddleware(PERMISSIONS.SCHEDULES_UPDATE),
-  validate(updateScheduleSchema),
-  scheduleController.updateSchedule,
+  "/shifts/:id",
+  permissionMiddleware(PERMISSIONS.SHIFTS_UPDATE),
+  validate(updateShiftSchema),
+  shiftController.updateShift,
 );
+
 workforceRouter.delete(
-  "/schedules/:id",
-  permissionMiddleware(PERMISSIONS.SCHEDULES_DELETE),
-  scheduleController.deleteSchedule,
+  "/shifts/:id",
+  permissionMiddleware(PERMISSIONS.SHIFTS_DELETE),
+  shiftController.deleteShift,
 );
 
 workforceRouter.get(
