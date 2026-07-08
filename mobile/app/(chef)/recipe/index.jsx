@@ -55,6 +55,7 @@ export default function Recipe() {
   return (
     <View className="flex-1 bg-background">
       <Header
+        user={user}
         title="Recipe Book"
         initials={`${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`}
       />

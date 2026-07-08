@@ -54,6 +54,7 @@ export default function Orders() {
   return (
     <View className="flex-1 bg-background">
       <Header
+        user={user}
         title="Kitchen Orders"
         initials={`${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`}
       />

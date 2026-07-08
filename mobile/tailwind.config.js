@@ -16,7 +16,7 @@ module.exports = {
         xl: "24px",
       },
       fontFamily: {
-        light: ["Poppins-Light"],
+        normal: ["Poppins-Light"],
         regular: ["Poppins-Regular"],
         medium: ["Poppins-Medium"],
         semibold: ["Poppins-SemiBold"],

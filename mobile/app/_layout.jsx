@@ -15,7 +15,7 @@ export default function RootLayout() {
     "Poppins-SemiBold": require("../assets/fonts/Poppins-SemiBold.ttf"),
     "Poppins-Bold": require("../assets/fonts/Poppins-Bold.ttf"),
     "Poppins-ExtraBold": require("../assets/fonts/Poppins-ExtraBold.ttf"),
-    "Poppins-Light": require("../assets/fonts/Poppins-Light.ttf"),
+    "Poppins-normal": require("../assets/fonts/Poppins-Light.ttf"),
   });
   if (fontError) {
     console.log("FONT LOAD ERROR:", fontError);

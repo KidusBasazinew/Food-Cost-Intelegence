@@ -1,8 +1,8 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Image, Text, Pressable } from "react-native";
 import { Bell } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export function Header({ title, initials, onBellPress = () => {} }) {
+export function Header({ user, title, initials, onBellPress = () => {} }) {
   const insets = useSafeAreaInsets();
   return (
     <View
@@ -12,9 +12,16 @@ export function Header({ title, initials, onBellPress = () => {} }) {
       <View className="flex-row items-center justify-between px-5 h-16">
         <View className="flex-row items-center gap-3">
           <View className="w-10 h-10 rounded-full bg-primary-container items-center justify-center">
-            <Text className="text-primary font-semibold text-xs">
-              {initials}
-            </Text>
+            {user.imageUrl ? (
+              <Image
+                className="w-10 h-10 border-2 border-primary rounded-full"
+                src={user.imageUrl}
+              />
+            ) : (
+              <Text className="text-primary font-semibold text-xs">
+                {initials}
+              </Text>
+            )}
           </View>
           <Text className="text-lg font-semibold text-primary">{title}</Text>
         </View>

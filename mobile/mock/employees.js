@@ -14,6 +14,8 @@ export const employees = [
     lastName: "Tesfaye",
     role: "chef",
     phone: "0911000001",
+    imageUrl:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQx7F_T557LlBGz4FG5_nQMY1-cvSBGC1--b4XHJa6LdZIphdWXXtWooWrT&s=10",
     pinCode: "1111",
     hireDate: "2023-01-10",
     isActive: true,
@@ -28,6 +30,8 @@ export const employees = [
     lastName: "Girma",
     role: "reception",
     phone: "0911000002",
+    imageUrl:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRTZNrSW2JTyoN8wMJW2Ae8QYLGQSQpEtWa4_Y1Y4WQuA&s=10",
     pinCode: "2222",
     hireDate: "2023-03-15",
     isActive: true,
@@ -42,6 +46,8 @@ export const employees = [
     lastName: "Alemu",
     role: "manager",
     phone: "0911000003",
+    imageUrl:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREzT3ktfHwC55ycKWOsVnrNXMr997n82Q5VDvYk02CLg&s=10",
     pinCode: "3333",
     hireDate: "2022-11-01",
     isActive: true,

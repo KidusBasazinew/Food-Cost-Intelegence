@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import {
+  Image,
   BadgeCheck,
   Timer,
   UtensilsCrossed,
@@ -39,6 +40,7 @@ export default function Profile() {
   return (
     <View className="flex-1 bg-background">
       <Header
+        user={user}
         title="Kitchen Ops"
         initials={`${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`}
       />
@@ -49,12 +51,18 @@ export default function Profile() {
         {/* Profile hero */}
         <View className="bg-surface-container-highest rounded-3xl p-6 items-center border border-outline-variant/30">
           <View className="relative mb-3">
-            <View className="w-24 h-24 rounded-full border-4 border-primary/20 bg-primary-container items-center justify-center">
-              <Text className="text-primary font-semibold text-3xl">
-                {user?.firstName?.[0]}
-                {user?.lastName?.[0]}
-              </Text>
-            </View>
+            {user.imageUrl ? (
+              <View className="w-26 h-26 rounded-full border-4 border-primary/20 bg-primary-container items-center justify-center">
+                <Image className="w-24 h-24 rounded-full" src={user.imageUrl} />
+              </View>
+            ) : (
+              <View className="w-24 h-24 rounded-full border-4 border-primary/20 bg-primary-container items-center justify-center">
+                <Text className="text-primary font-semibold text-3xl">
+                  {user?.firstName?.[0]}
+                  {user?.lastName?.[0]}
+                </Text>
+              </View>
+            )}
             <View className="absolute bottom-0 right-0 bg-primary w-8 h-8 rounded-full items-center justify-center border-2 border-surface-container-highest">
               <BadgeCheck size={16} color="#FFFFFF" />
             </View>

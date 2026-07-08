@@ -89,6 +89,7 @@ export default function Inventory() {
   return (
     <View className="flex-1 bg-background">
       <Header
+        user={user}
         title="Stock Inventory"
         initials={`${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`}
       />
