@@ -1,15 +1,21 @@
 import { Tabs, Redirect } from "expo-router";
-import { Home, ShoppingBasket, Package, User } from "lucide-react-native";
+import {
+  Home,
+  ClipboardList,
+  Utensils,
+  Package,
+  User,
+} from "lucide-react-native";
 import { useAuth } from "../../context/AuthContext";
 import { CustomTabBar } from "../../components/CustomTabBar";
 
 const CHEF_ICONS = {
   dashboard: Home,
-  orders: ShoppingBasket,
+  orders: ClipboardList,
+  recipe: Utensils,
   inventory: Package,
   profile: User,
 };
-
 Object.entries(CHEF_ICONS).forEach(([key, val]) => {
   if (!val) console.warn(`Missing icon for route: ${key}`);
 });
@@ -26,6 +32,7 @@ export default function ChefLayout() {
     >
       <Tabs.Screen name="dashboard" options={{ title: "Dashboard" }} />
       <Tabs.Screen name="orders" options={{ title: "Orders" }} />
+      <Tabs.Screen name="recipe" options={{ title: "Recipe" }} />
       <Tabs.Screen name="inventory" options={{ title: "Inventory" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>

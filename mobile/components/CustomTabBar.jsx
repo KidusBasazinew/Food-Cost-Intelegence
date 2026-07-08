@@ -11,12 +11,17 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const BAR_HEIGHT = 66;
 const CIRCLE_SIZE = 60;
 const MASK_SIZE = CIRCLE_SIZE + 16;
-const OVERLAP = 24;
+const OVERLAP = 30;
+const CONTAINER_PADDING = 10; // must match paddingHorizontal below
 
 export function CustomTabBar({ state, descriptors, navigation, icons }) {
   const insets = useSafeAreaInsets();
   const tabCount = state.routes.length;
-  const tabWidth = SCREEN_WIDTH / tabCount;
+
+  // ✅ subtract the container's horizontal padding before dividing
+  const barWidth = SCREEN_WIDTH - CONTAINER_PADDING * 2;
+  const tabWidth = barWidth / tabCount;
+
   const translateX = useSharedValue(state.index * tabWidth);
 
   useEffect(() => {
@@ -34,7 +39,7 @@ export function CustomTabBar({ state, descriptors, navigation, icons }) {
     <View
       className="bg-background"
       style={{
-        paddingHorizontal: 10,
+        paddingHorizontal: CONTAINER_PADDING,
         paddingTop: 10,
         paddingBottom: insets.bottom + 10,
       }}
@@ -54,27 +59,21 @@ export function CustomTabBar({ state, descriptors, navigation, icons }) {
           circleStyle,
         ]}
       >
-        {/* Cutout mask — matches screen background to fake a notch */}
         <View
-          className="bg-background items-center justify-center"
+          className="items-center justify-center"
           style={{
             width: MASK_SIZE,
             height: MASK_SIZE,
             borderRadius: MASK_SIZE / 2,
           }}
         >
-          {/* Active button — this is the only element that gets elevation */}
           <View
-            className="bg-primary items-center justify-center"
+            className="bg-primary items-center justify-center border-t-4 border-l-4 border-r-4 border-b-4 border-[#fdf8fd] rounded-full"
             style={{
               width: CIRCLE_SIZE,
               height: CIRCLE_SIZE,
-              borderRadius: CIRCLE_SIZE / 2,
+              // borderRadius: CIRCLE_SIZE / 2,
               elevation: 8,
-              shadowColor: "#000",
-              shadowOpacity: 0.25,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 4 },
             }}
           >
             {(() => {
@@ -124,7 +123,7 @@ export function CustomTabBar({ state, descriptors, navigation, icons }) {
               className="items-center justify-end pb-2"
             >
               {isFocused ? (
-                <Text className="text-[11px] font-bold text-primary mb-1">
+                <Text className="text-[11px] font-semibold text-primary mb-1">
                   {label}
                 </Text>
               ) : (

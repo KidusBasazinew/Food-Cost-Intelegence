@@ -1,3 +1,8 @@
+// Note: schema's EmployeeRole enum is uppercase (CHEF, RECEPTION, MANAGER...).
+// We keep a lowercase `role` for app routing (matches our (chef)/(reception)/(manager) route groups)
+// since that's what Expo Router's folder names use. When you wire the real API,
+// map EmployeeRole -> route role in one place (see roleToRoute below).
+
 export const employees = [
   {
     id: "1",
@@ -42,3 +47,24 @@ export const employees = [
     isActive: true,
   },
 ];
+
+export const shifts = {
+  s1: { id: "s1", name: "Morning Shift", startTime: "06:00", endTime: "14:00" },
+  s2: { id: "s2", name: "Day Shift", startTime: "09:00", endTime: "17:00" },
+};
+
+export function roleToRoute(schemaRole) {
+  const map = {
+    CHEF: "chef",
+    RECEPTION: "reception",
+    MANAGER: "manager",
+    HOUSEKEEPING: "operations",
+    WAITER: "chef",
+    CASHIER: "reception",
+    STORE_KEEPER: "chef",
+    SECURITY: "operations",
+    MAINTENANCE: "operations",
+    OTHER: "reception",
+  };
+  return map[schemaRole] ?? "reception";
+}
