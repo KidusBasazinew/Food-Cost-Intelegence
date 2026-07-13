@@ -1,14 +1,7 @@
 import { useEffect } from "react";
 
+import { resolveTheme } from "@/lib/theme";
 import { useThemeStore } from "@/store/useThemeStore";
-
-function resolveTheme(theme) {
-  if (theme === "light" || theme === "dark") return theme;
-  const prefersDark = window.matchMedia?.(
-    "(prefers-color-scheme: dark)",
-  )?.matches;
-  return prefersDark ? "dark" : "light";
-}
 
 export function ThemeProvider({ children }) {
   const theme = useThemeStore((s) => s.theme);

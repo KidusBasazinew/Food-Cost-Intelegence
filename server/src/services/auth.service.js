@@ -3,7 +3,12 @@ import crypto from "node:crypto";
 import { prisma } from "../prisma/client.js";
 import { ApiError } from "../utils/apiError.js";
 import { hashPassword, verifyPassword } from "../utils/hash.js";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt.js";
+import { ROLE_PERMISSIONS } from "../constants/rolePermissions.js";
 
 function slugify(input) {
   return String(input)
@@ -17,6 +22,39 @@ function slugify(input) {
 function sha256Base64(value) {
   return crypto.createHash("sha256").update(value).digest("base64");
 }
+
+const authHotelSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  status: true,
+  logoUrl: true,
+  city: true,
+  country: true,
+};
+
+const authBranchSelect = {
+  id: true,
+  name: true,
+  code: true,
+  status: true,
+};
+
+const authUserSelect = {
+  id: true,
+  hotelId: true,
+  branchId: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  role: true,
+  status: true,
+  lastLoginAt: true,
+  createdAt: true,
+  updatedAt: true,
+  hotel: { select: authHotelSelect },
+  branch: { select: authBranchSelect },
+};
 
 function buildAccessPayload(user) {
   return {
@@ -47,7 +85,14 @@ function sanitizeUser(user) {
   // (Prisma select below also excludes it, but this is a second guard.)
   // eslint-disable-next-line no-unused-vars
   const { passwordHash, ...safe } = user;
-  return safe;
+
+  // Attach permissions based on role
+  const permissions = ROLE_PERMISSIONS[safe.role] || [];
+
+  return {
+    ...safe,
+    permissions,
+  };
 }
 
 async function issueRefreshToken({ userId, ipAddress, userAgent }) {
@@ -86,7 +131,7 @@ async function rotateRefreshToken({ existingToken, ipAddress, userAgent }) {
 
   const record = await prisma.refreshToken.findUnique({
     where: { tokenHash },
-    include: { user: true },
+    include: { user: { select: authUserSelect } },
   });
 
   if (!record) {
@@ -182,12 +227,54 @@ export async function register({ hotel, user }) {
 
   return result;
 }
+export async function createStaffUser({ hotelId, branchId, staffData }) {
+  const email = staffData.email.toLowerCase();
 
+  // 1. Check if user already exists
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    throw new ApiError(409, "CONFLICT", "Email already registered");
+  }
+
+  // 2. Hash the staff member's temporary password
+  const passwordHash = await hashPassword(staffData.password);
+
+  // 3. Create user attached to the existing hotel and branch
+  const createdUser = await prisma.user.create({
+    data: {
+      hotelId, // Linked to existing hotel
+      branchId: branchId || null, // Linked to existing branch (if applicable)
+      firstName: staffData.firstName,
+      lastName: staffData.lastName,
+      email,
+      passwordHash,
+      role: staffData.role, // Dynamically assigns role (e.g., "WAITER", "CASHIER")
+      status: "ACTIVE",
+    },
+    select: {
+      id: true,
+      hotelId: true,
+      branchId: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  return createdUser;
+}
 export async function login({ email, password, ipAddress, userAgent }) {
   const normalizedEmail = email.toLowerCase();
 
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
+    select: {
+      ...authUserSelect,
+      passwordHash: true,
+    },
   });
 
   if (!user) {
@@ -203,9 +290,10 @@ export async function login({ email, password, ipAddress, userAgent }) {
     throw new ApiError(401, "UNAUTHORIZED", "Invalid email or password");
   }
 
+  const lastLoginAt = new Date();
   await prisma.user.update({
     where: { id: user.id },
-    data: { lastLoginAt: new Date() },
+    data: { lastLoginAt },
   });
 
   const accessToken = signAccessToken(buildAccessPayload(user));
@@ -215,7 +303,7 @@ export async function login({ email, password, ipAddress, userAgent }) {
     userAgent,
   });
 
-  const safeUser = sanitizeUser(user);
+  const safeUser = sanitizeUser({ ...user, lastLoginAt });
 
   return {
     accessToken,

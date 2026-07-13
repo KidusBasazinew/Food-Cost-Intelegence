@@ -12,6 +12,7 @@ import {
 export const authRouter = Router();
 
 authRouter.post("/register", validate(registerSchema), authController.register);
+authRouter.post("/add-staff", authMiddleware, authController.addStaff);
 authRouter.post("/login", validate(loginSchema), authController.login);
 authRouter.post("/logout", authController.logout);
 authRouter.post("/refresh", validate(refreshSchema), authController.refresh);

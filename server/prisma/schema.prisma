@@ -15,6 +15,11 @@ enum Role {
   SUPER_ADMIN
   ADMIN
   MANAGER
+  RECEPTION
+  CASHIER
+  CHEF
+  CLEANER
+  VIEWER
   STAFF
 }
 
@@ -48,8 +53,24 @@ model Hotel {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  branches Branch[]
-  users    User[]
+  branches              Branch[]
+  users                 User[]
+  employees             Employee[]
+  shifts                Shift[]
+  inventoryItems        InventoryItem[]
+  inventoryTransactions InventoryTransaction[]
+  suppliers             Supplier[]
+  purchases             Purchase[]
+  recipes               Recipe[]
+  inventoryConsumptions InventoryConsumption[]
+  salesOrders           SalesOrder[]
+  notifications         Notification[]
+  posOrders             PosOrder[]
+  stockMovements        StockMovement[]
+  stockCounts           StockCount[]
+  rooms                 Room[]
+  reservations          Reservation[]
+  housekeepingTasks     HousekeepingTask[]
 
   @@index([status])
   @@index([createdAt])
@@ -66,8 +87,25 @@ model Branch {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  users User[]
+  hotel                      Hotel                       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  users                      User[]
+  employees                  Employee[]
+  inventoryItems             InventoryItem[]
+  inventoryTransactions      InventoryTransaction[]
+  suppliers                  Supplier[]
+  purchases                  Purchase[]
+  recipes                    Recipe[]
+  inventoryConsumptions      InventoryConsumption[]
+  salesOrders                SalesOrder[]
+  menuAnalyticsSnapshots     MenuAnalyticsSnapshot[]
+  inventoryForecastSnapshots InventoryForecastSnapshot[]
+  notifications              Notification[]
+  posOrders                  PosOrder[]
+  stockMovements             StockMovement[]
+  stockCounts                StockCount[]
+  rooms                      Room[]
+  reservations               Reservation[]
+  housekeepingTasks          HousekeepingTask[]
 
   @@unique([hotelId, code])
   @@index([hotelId])
@@ -89,14 +127,67 @@ model User {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  hotel        Hotel        @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  refreshTokens RefreshToken[]
+  hotel                        Hotel                  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch                       Branch?                @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  refreshTokens                RefreshToken[]
+  inventoryTransactionsCreated InventoryTransaction[] @relation("InventoryTransactionCreatedBy")
+  purchasesCreated             Purchase[]             @relation("PurchaseCreatedBy")
+  notifications                Notification[]
+  assignedHousekeepingTasks    HousekeepingTask[]
 
   @@index([hotelId])
   @@index([branchId])
   @@index([role])
   @@index([status])
+  @@index([createdAt])
+}
+
+// =====================================================
+// Stage 6 — Enterprise In-App Notifications
+// =====================================================
+
+enum NotificationType {
+  LOW_STOCK
+  OUT_OF_STOCK
+  PURCHASE_CREATED
+  PURCHASE_STATUS_CHANGED
+  WASTE_ALERT
+  PROFITABILITY_ALERT
+  SYSTEM_ALERT
+}
+
+enum NotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  HIGH
+  CRITICAL
+}
+
+model Notification {
+  id        String               @id @default(uuid())
+  hotelId   String
+  branchId  String?
+  userId    String?
+  type      NotificationType
+  severity  NotificationSeverity @default(INFO)
+  title     String
+  message   String?
+  actionUrl String?
+  metadata  Json?
+  isRead    Boolean              @default(false)
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId, userId, isRead, createdAt])
+  @@index([hotelId, branchId, createdAt])
+  @@index([type])
+  @@index([severity])
   @@index([createdAt])
 }
 
@@ -120,4 +211,856 @@ model RefreshToken {
   @@index([expiresAt])
   @@index([revokedAt])
   @@index([createdAt])
+}
+
+// =====================================================
+// Stage 3 — Inventory Foundation + Measurement Units + Purchases
+// =====================================================
+
+enum InventoryCategory {
+  PRODUCE
+  MEAT
+  SEAFOOD
+  DAIRY
+  DRY_GOODS
+  BEVERAGES
+  SPICES
+  BAKERY
+  PACKAGING
+  CLEANING
+  OTHER
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  ADJUSTMENT
+  WASTE
+  CONSUMPTION
+  TRANSFER
+}
+
+enum PurchaseStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum MeasurementBaseType {
+  G
+  ML
+  PIECE
+}
+
+// =====================================================
+// Stage 4 — Recipe Management + Inventory Consumption + Food Cost Intelligence
+// =====================================================
+
+enum RecipeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RecipeCategory {
+  APPETIZER
+  MAIN
+  SIDE
+  SALAD
+  SOUP
+  BREAKFAST
+  SNACK
+  DESSERT
+  DRINK
+  OTHER
+}
+
+enum ConsumptionSourceType {
+  ORDER
+  MANUAL_WASTE
+  TESTING
+  ADJUSTMENT
+}
+
+// =====================================================
+// Stage 7 — POS Orders + Kitchen Flow + Stock Movements
+// =====================================================
+
+enum PosOrderStatus {
+  DRAFT
+  SENT_TO_KITCHEN
+  PREPARING
+  READY
+  SERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum StockMovementType {
+  PURCHASE
+  SALE_CONSUMPTION
+  WASTE
+  ADJUSTMENT
+  RETURN
+  MANUAL_CORRECTION
+}
+
+enum RecipeYieldUnit {
+  PORTION
+  PLATE
+  BOWL
+  CUP
+  PIECE
+  TRAY
+  BOTTLE
+  BATCH
+  LITER
+  KILOGRAM
+}
+
+model MeasurementUnit {
+  id               String              @id @default(uuid())
+  name             String
+  symbol           String
+  baseType         MeasurementBaseType
+  conversionFactor Decimal             @default(1)
+  isBaseUnit       Boolean             @default(false)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  inventoryItems    InventoryItem[]        @relation("InventoryItemBaseUnit")
+  inventoryTxns     InventoryTransaction[]
+  purchaseItems     PurchaseItem[]
+  recipeIngredients RecipeIngredient[]
+
+  @@unique([baseType, symbol])
+  @@index([baseType])
+  @@index([isBaseUnit])
+}
+
+model InventoryItem {
+  id                          String            @id @default(uuid())
+  hotelId                     String
+  branchId                    String?
+  name                        String
+  sku                         String?
+  category                    InventoryCategory @default(OTHER)
+  baseUnitId                  String
+  quantityInStock             Decimal           @default(0)
+  averageCostPerBaseUnitCents Decimal           @default(0)
+  minimumStockLevel           Decimal           @default(0)
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
+
+  hotel                      Hotel                       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch                     Branch?                     @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  baseUnit                   MeasurementUnit             @relation("InventoryItemBaseUnit", fields: [baseUnitId], references: [id], onDelete: Restrict)
+  transactions               InventoryTransaction[]
+  purchaseItems              PurchaseItem[]
+  recipeIngredients          RecipeIngredient[]
+  consumptions               InventoryConsumption[]
+  stockMovements             StockMovement[]
+  stockCountItems            StockCountItem[]
+  inventoryForecastSnapshots InventoryForecastSnapshot[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Recipe {
+  id                      String          @id @default(uuid())
+  hotelId                 String
+  branchId                String?
+  menuItemId              String?
+  name                    String
+  description             String?
+  imageUrl                String?
+  category                RecipeCategory  @default(OTHER)
+  yieldQuantity           Decimal         @default(1)
+  yieldUnit               RecipeYieldUnit @default(PORTION)
+  preparationInstructions String?
+  status                  RecipeStatus    @default(ACTIVE)
+  totalCostCents          Decimal         @default(0)
+  sellingPriceCents       Decimal         @default(0)
+  estimatedProfitCents    Decimal         @default(0)
+  estimatedProfitMargin   Decimal         @default(0)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  ingredients            RecipeIngredient[]
+  consumptions           InventoryConsumption[]
+  salesOrderItems        SalesOrderItem[]
+  posOrderItems          PosOrderItem[]
+  menuAnalyticsSnapshots MenuAnalyticsSnapshot[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([category])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model RecipeIngredient {
+  id                   String   @id @default(uuid())
+  recipeId             String
+  inventoryItemId      String
+  quantity             Decimal
+  unitId               String
+  quantityInBaseUnit   Decimal
+  costPerBaseUnitCents Decimal  @default(0)
+  totalCostCents       Decimal  @default(0)
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  recipe        Recipe                 @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem          @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  unit          MeasurementUnit        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  consumptions  InventoryConsumption[]
+
+  @@index([recipeId])
+  @@index([inventoryItemId])
+  @@index([unitId])
+}
+
+model InventoryConsumption {
+  id                       String                @id @default(uuid())
+  hotelId                  String
+  branchId                 String?
+  recipeId                 String?
+  recipeIngredientId       String?
+  inventoryItemId          String
+  posOrderId               String?
+  sourceType               ConsumptionSourceType
+  sourceId                 String?
+  quantityConsumed         Decimal
+  quantityConsumedBaseUnit Decimal
+  unitCostCents            Decimal
+  totalCostCents           Decimal
+  createdAt                DateTime              @default(now())
+
+  hotel            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch           Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  recipe           Recipe?           @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  recipeIngredient RecipeIngredient? @relation(fields: [recipeIngredientId], references: [id], onDelete: SetNull)
+  inventoryItem    InventoryItem     @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  posOrder         PosOrder?         @relation(fields: [posOrderId], references: [id], onDelete: SetNull)
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([inventoryItemId])
+  @@index([recipeId])
+  @@index([recipeIngredientId])
+  @@index([posOrderId])
+  @@index([sourceType])
+  @@index([createdAt])
+}
+
+model PosOrder {
+  id            String  @id @default(uuid())
+  hotelId       String
+  branchId      String?
+  orderNumber   String  @unique
+  tableNumber   Int
+  waiterName    String
+  customerCount Int     @default(1)
+
+  subtotalCents      Decimal @default(0)
+  taxCents           Decimal @default(0)
+  serviceChargeCents Decimal @default(0)
+  totalCents         Decimal @default(0)
+
+  status PosOrderStatus @default(DRAFT)
+  notes  String?
+
+  sentToKitchenAt DateTime?
+  completedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  items        PosOrderItem[]
+  consumptions InventoryConsumption[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PosOrderItem {
+  id String @id @default(uuid())
+
+  orderId  String
+  recipeId String
+
+  quantity        Decimal
+  unitPriceCents  Decimal
+  totalPriceCents Decimal
+
+  notes     String?
+  createdAt DateTime @default(now())
+
+  order  PosOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recipe Recipe   @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([recipeId])
+  @@index([createdAt])
+}
+
+model StockMovement {
+  id String @id @default(uuid())
+
+  hotelId         String
+  branchId        String?
+  inventoryItemId String
+  type            StockMovementType
+
+  quantityBefore  Decimal
+  quantityChanged Decimal
+  quantityAfter   Decimal
+
+  unitCostCents  Decimal?
+  totalCostCents Decimal?
+
+  referenceType String?
+  referenceId   String?
+  notes         String?
+
+  createdAt DateTime @default(now())
+
+  hotel         Hotel         @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch        Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryItemId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model InventoryTransaction {
+  id                       String                   @id @default(uuid())
+  hotelId                  String
+  branchId                 String?
+  inventoryItemId          String
+  type                     InventoryTransactionType
+  quantity                 Decimal
+  unitId                   String
+  quantityInBaseUnit       Decimal
+  unitCostPerBaseUnitCents Decimal?
+  totalCostCents           Decimal?
+  referenceType            String?
+  referenceId              String?
+  note                     String?
+  createdByUserId          String?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  hotel         Hotel           @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch        Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  inventoryItem InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  unit          MeasurementUnit @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  createdBy     User?           @relation("InventoryTransactionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([inventoryItemId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  hotelId   String
+  branchId  String?
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel     Hotel      @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch    Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  purchases Purchase[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([createdAt])
+}
+
+model Purchase {
+  id              String         @id @default(uuid())
+  hotelId         String
+  branchId        String?
+  supplierId      String
+  status          PurchaseStatus @default(DRAFT)
+  orderedAt       DateTime?
+  expectedAt      DateTime?
+  receivedAt      DateTime?
+  notes           String?
+  createdByUserId String?
+  subtotalCents   Decimal        @default(0)
+  taxCents        Decimal        @default(0)
+  totalCents      Decimal        @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  hotel     Hotel          @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch    Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  supplier  Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  createdBy User?          @relation("PurchaseCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  items     PurchaseItem[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PurchaseItem {
+  id                 String   @id @default(uuid())
+  purchaseId         String
+  inventoryItemId    String
+  unitId             String
+  quantity           Decimal
+  quantityInBaseUnit Decimal
+  unitCostCents      Decimal
+  totalCostCents     Decimal
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  purchase      Purchase        @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  unit          MeasurementUnit @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  @@index([purchaseId])
+  @@index([inventoryItemId])
+}
+
+// =====================================================
+// Stage 5 — Executive Food Operations BI + Analytics Snapshots
+// =====================================================
+
+enum MenuEngineeringCategory {
+  STAR
+  PUZZLE
+  PLOWHORSE
+  DOG
+}
+
+enum AnalyticsPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum SalesOrderStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+model SalesOrder {
+  id                String           @id @default(uuid())
+  hotelId           String
+  branchId          String?
+  status            SalesOrderStatus @default(COMPLETED)
+  orderedAt         DateTime         @default(now())
+  totalRevenueCents Decimal          @default(0)
+  metadata          Json?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  hotel  Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  items  SalesOrderItem[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([status])
+  @@index([orderedAt])
+  @@index([createdAt])
+}
+
+model SalesOrderItem {
+  id                String   @id @default(uuid())
+  salesOrderId      String
+  recipeId          String
+  quantity          Decimal
+  unitPriceCents    Decimal
+  totalRevenueCents Decimal
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+
+  @@index([salesOrderId])
+  @@index([recipeId])
+  @@index([createdAt])
+}
+
+model MenuAnalyticsSnapshot {
+  id                       String                  @id @default(uuid())
+  menuItemId               String
+  branchId                 String
+  period                   AnalyticsPeriod
+  snapshotDate             DateTime
+  totalSalesCount          Decimal                 @default(0)
+  totalRevenueCents        Decimal                 @default(0)
+  totalIngredientCostCents Decimal                 @default(0)
+  totalProfitCents         Decimal                 @default(0)
+  foodCostPercentage       Decimal                 @default(0)
+  grossMarginPercentage    Decimal                 @default(0)
+  engineeringCategory      MenuEngineeringCategory
+  createdAt                DateTime                @default(now())
+
+  menuItem Recipe @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, branchId, period, snapshotDate])
+  @@index([branchId])
+  @@index([period])
+  @@index([snapshotDate])
+  @@index([createdAt])
+}
+
+model InventoryForecastSnapshot {
+  id                      String   @id @default(uuid())
+  inventoryItemId         String
+  branchId                String
+  averageDailyConsumption Decimal  @default(0)
+  estimatedDaysRemaining  Decimal  @default(0)
+  projectedWeeklyUsage    Decimal  @default(0)
+  projectedMonthlyUsage   Decimal  @default(0)
+  createdAt               DateTime @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  branch        Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryItemId])
+  @@index([branchId])
+  @@index([createdAt])
+}
+
+// =====================================================
+// Stage 8 — Inventory Leakage Detection & Variance Intelligence
+// =====================================================
+
+enum StockCountStatus {
+  DRAFT
+  COMPLETED
+}
+
+model StockCount {
+  id String @id @default(uuid())
+
+  hotelId  String
+  branchId String?
+
+  status StockCountStatus @default(DRAFT)
+
+  countedBy String?
+  notes     String?
+  countedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  items StockCountItem[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([status])
+  @@index([countedAt])
+  @@index([createdAt])
+}
+
+model StockCountItem {
+  id String @id @default(uuid())
+
+  stockCountId    String
+  inventoryItemId String
+
+  systemQuantity     Decimal
+  physicalQuantity   Decimal
+  varianceQuantity   Decimal
+  variancePercentage Decimal
+
+  stockCount    StockCount    @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@unique([stockCountId, inventoryItemId])
+  @@index([stockCountId])
+  @@index([inventoryItemId])
+}
+
+// =====================================================
+// Room Operations (Isolated Hotel Operations Module)
+// =====================================================
+
+enum RoomStatus {
+  VACANT
+  OCCUPIED
+  DIRTY
+  CLEANING
+  INSPECTING
+  READY
+  OUT_OF_SERVICE
+}
+
+enum ReservationStatus {
+  RESERVED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+enum HousekeepingStatus {
+  PENDING
+  IN_PROGRESS
+  CLEANED
+  VERIFIED
+}
+
+enum HousekeepingTaskKind {
+  CLEANING
+  MAINTENANCE
+  INSPECTION
+}
+
+model Room {
+  id       String  @id @default(uuid())
+  hotelId  String
+  branchId String?
+
+  roomNumber String
+  floor      Int?
+
+  status   RoomStatus @default(VACANT)
+  isActive Boolean    @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations      Reservation[]
+  housekeepingTasks HousekeepingTask[]
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([hotelId, branchId, roomNumber])
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([status])
+}
+
+model Reservation {
+  id       String  @id @default(uuid())
+  hotelId  String
+  branchId String?
+
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  guestName  String
+  guestPhone String?
+  guestEmail String?
+
+  status ReservationStatus @default(RESERVED)
+
+  checkInAt        DateTime?
+  checkOutAt       DateTime?
+  actualCheckOutAt DateTime?
+
+  lateCheckoutFeeCents Int @default(0)
+
+  notes String?
+
+  housekeepingTasks HousekeepingTask[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([roomId])
+  @@index([status])
+}
+
+model HousekeepingTask {
+  id       String  @id @default(uuid())
+  hotelId  String
+  branchId String?
+
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  reservationId String?
+  reservation   Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+  kind   HousekeepingTaskKind @default(CLEANING)
+  status HousekeepingStatus   @default(PENDING)
+
+  assignedUserId String?
+  assignedUser   User?   @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+
+  checkedInAt DateTime?
+  completedAt DateTime?
+  verifiedAt  DateTime?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([roomId])
+  @@index([status])
+  @@index([kind])
+}
+
+// =====================================================
+// Workforce — Employee Attendance & Time Management (Isolated)
+// =====================================================
+
+enum EmployeeRole {
+  HOUSEKEEPING
+  RECEPTION
+  CHEF
+  WAITER
+  CASHIER
+  STORE_KEEPER
+  SECURITY
+  MANAGER
+  MAINTENANCE
+  OTHER
+}
+
+model Employee {
+  id String @id @default(uuid())
+
+  hotelId  String
+  branchId String?
+
+  shiftId String?
+
+  employeeCode String @unique
+
+  firstName String
+  lastName  String
+
+  role EmployeeRole
+
+  phone String?
+
+  pinCode String
+
+  hireDate DateTime?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel  Hotel   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  shift Shift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  attendanceRecords AttendanceRecord[]
+
+  @@index([hotelId])
+  @@index([branchId])
+  @@index([isActive])
+}
+
+model Shift {
+  id String @id @default(uuid())
+
+  hotelId String
+
+  name String
+
+  startTime String
+  endTime   String
+
+  graceMinutes Int @default(10)
+
+  isActive Boolean @default(true)
+
+  color String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotel Hotel @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  employees         Employee[]
+  attendanceRecords AttendanceRecord[]
+
+  @@index([hotelId])
+  @@index([isActive])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  HALF_DAY
+}
+
+model AttendanceRecord {
+  id String @id @default(uuid())
+
+  employeeId String
+
+  shiftId String?
+
+  date DateTime
+
+  scheduledStart DateTime?
+  scheduledEnd   DateTime?
+
+  checkInAt  DateTime?
+  checkOutAt DateTime?
+
+  workedMinutes Int @default(0)
+
+  lateMinutes Int @default(0)
+
+  overtimeMinutes Int @default(0)
+
+  status AttendanceStatus
+
+  notes String?
+
+  createdAt DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  shift Shift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
+  @@index([employeeId])
+  @@index([shiftId])
+  @@index([date])
 }
