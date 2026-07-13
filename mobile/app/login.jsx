@@ -4,7 +4,12 @@ import { useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
-
+const ROLE_HOME = {
+  chef: "dashboard",
+  reception: "dashboard",
+  manager: "dashboard",
+  storecount: "count",
+};
 export default function Login() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
@@ -26,7 +31,9 @@ export default function Login() {
     if (next.length === 4) {
       const result = await login(next);
       if (result.success) {
-        router.replace(`/(${result.employee.role})/dashboard`);
+        router.replace(
+          `/(${result.employee.role})/${ROLE_HOME[result.employee.role]}`,
+        );
       } else {
         setError("Incorrect PIN");
         setPin("");

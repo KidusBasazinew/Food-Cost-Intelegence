@@ -52,6 +52,22 @@ export const employees = [
     hireDate: "2022-11-01",
     isActive: true,
   },
+  {
+    id: "4",
+    hotelId: "h1",
+    branchId: "b1",
+    shiftId: "s1",
+    employeeCode: "EMP004",
+    firstName: "Betelhem",
+    lastName: "Kassa",
+    role: "storecount",
+    phone: "0911000004",
+    imageUrl:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREzT3ktfHwC55ycKWOsVnrNXMr997n82Q5VDvYk02CLg&s=10",
+    pinCode: "4444",
+    hireDate: "2023-06-01",
+    isActive: true,
+  },
 ];
 
 export const shifts = {
@@ -64,12 +80,12 @@ export function roleToRoute(schemaRole) {
     CHEF: "chef",
     RECEPTION: "reception",
     MANAGER: "manager",
-    HOUSEKEEPING: "operations",
+    HOUSEKEEPING: "reception",
     WAITER: "chef",
     CASHIER: "reception",
-    STORE_KEEPER: "chef",
-    SECURITY: "operations",
-    MAINTENANCE: "operations",
+    STORE_KEEPER: "storecount",
+    SECURITY: "reception",
+    MAINTENANCE: "reception",
     OTHER: "reception",
   };
   return map[schemaRole] ?? "reception";

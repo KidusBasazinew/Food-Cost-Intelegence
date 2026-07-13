@@ -34,6 +34,8 @@ export default function Index() {
       return <Redirect href="/(reception)/dashboard" />;
     case "manager":
       return <Redirect href="/(manager)/dashboard" />;
+    case "storecount":
+      return <Redirect href="/(storecount)/dashboard" />;
     default:
       return <Redirect href="/login" />;
   }
