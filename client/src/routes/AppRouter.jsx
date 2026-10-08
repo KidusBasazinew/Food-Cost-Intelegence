@@ -106,8 +106,8 @@ export function AppRouter() {
               path="/pos"
               element={<Navigate to="/pos/orders" replace />}
             />
-            <Route path="/pos/orders" element={<PosOrderHistoryPage />} />
-            <Route path="/pos/analytics" element={<PosAnalyticsPage />} />
+            <Route path="/orders" element={<PosOrderHistoryPage />} />
+            <Route path="/analytics" element={<PosAnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>

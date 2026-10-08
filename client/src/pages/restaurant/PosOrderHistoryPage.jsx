@@ -96,7 +96,13 @@ export function PosOrderHistoryPage() {
       {
         accessorKey: "items",
         header: "Items Count",
-        cell: ({ row }) => toNumber(row.original.items?.length ?? 0),
+        cell: ({ row }) => {
+          const itemCount = (row.original.items ?? []).reduce(
+            (total, item) => total + toNumber(item?.quantity),
+            0,
+          );
+          return <span>{itemCount}</span>;
+        },
       },
       {
         accessorKey: "totalCents",

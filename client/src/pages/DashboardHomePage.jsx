@@ -69,14 +69,8 @@ export function DashboardHomePage() {
         }
         subtitle={
           hotel?.name
-            ? `Hotel workspace — ${hotelLocation || "Location not set"}`
-            : "Executive operational intelligence for hospitality food operations — inventory, costing, waste, and profitability in one premium workspace."
-        }
-        badge={
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-            Operations center
-          </span>
+            ? `Cafe workspace ${hotelLocation || "Location not set"}`
+            : "Executive operational intelligence for hospitality food operations inventory, costing, waste, and profitability in one premium workspace."
         }
         actions={
           <Button asChild className="rounded-xl">
@@ -194,7 +188,7 @@ export function DashboardHomePage() {
         <DashboardNotificationsWidget />
 
         <InsightPanel variant="analytics" title="Operational intelligence">
-          Your platform is fully connected — inventory flows, recipe costing,
+          Your platform is fully connected inventory flows, recipe costing,
           purchase management, waste analytics, and executive dashboards are
           live. Use Analytics for revenue vs. cost trends, menu engineering, and
           supplier intelligence.

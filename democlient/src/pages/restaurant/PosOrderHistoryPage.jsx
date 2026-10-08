@@ -58,7 +58,6 @@ export function PosOrderHistoryPage() {
       setLoading(false);
     }
   }
-
   useEffect(() => {
     load(page);
   }, [page]);
@@ -114,20 +113,13 @@ export function PosOrderHistoryPage() {
       {
         accessorKey: "items",
         header: "Items Count",
-        cell: ({ row }) => (
-          <span>
-            {toNumber(row.original.items?.length ?? 0)}
-            {!row.original._demoAging ? (
-              <span className="ml-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                real
-              </span>
-            ) : (
-              <span className="ml-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                demo (aged · sampled)
-              </span>
-            )}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const itemCount = (row.original.items ?? []).reduce(
+            (total, item) => total + toNumber(item?.quantity),
+            0,
+          );
+          return <span>{itemCount}</span>;
+        },
       },
       {
         accessorKey: "totalCents",
@@ -147,7 +139,7 @@ export function PosOrderHistoryPage() {
       {/* Structural Page Header Context */}
       <PageHeader
         title="POS Order History"
-        subtitle={`Audit ledger view of historically processed point-of-sale customer logs. ${aged.freshCount} showing real figures, ${aged.sampledCount} of ${aged.agedCount} aged items displayed (demo ${Math.round(getDemoAgingCountRatio() * 100)}% count ratio).`}
+        subtitle={`Audit ledger view of historically processed point-of-sale customer logs`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button

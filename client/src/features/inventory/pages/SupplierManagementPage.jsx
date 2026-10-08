@@ -78,7 +78,7 @@ export function SupplierManagementPage() {
     <PageShell>
       <PageHeader
         title="Supplier Management"
-        subtitle="Suppliers are scoped to your hotel and optionally branch."
+        subtitle="Suppliers are scoped to your cafeand optionally branch."
         actions={
           <>
             <Button asChild variant="outline" className="rounded-xl">
@@ -147,7 +147,9 @@ export function SupplierManagementPage() {
                 id="supplier-email"
                 type="email"
                 value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, email: e.target.value }))
+                }
                 placeholder="vendor@example.com"
               />
             </FormField>
@@ -156,7 +158,9 @@ export function SupplierManagementPage() {
                 id="supplier-phone"
                 type="tel"
                 value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, phone: e.target.value }))
+                }
                 placeholder="+1 555 000 0000"
               />
             </FormField>
@@ -165,7 +169,9 @@ export function SupplierManagementPage() {
             <Input
               id="supplier-address"
               value={form.address}
-              onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, address: e.target.value }))
+              }
               placeholder="Street, city, country"
             />
           </FormField>
