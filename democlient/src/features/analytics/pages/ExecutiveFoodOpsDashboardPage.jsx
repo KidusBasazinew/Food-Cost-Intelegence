@@ -10,6 +10,11 @@ import {
 
 import { AnalyticsFilterBar } from "@/features/analytics/components/AnalyticsFilterBar";
 import { useExecutiveDashboardQuery } from "@/features/analytics/hooks/useExecutiveDashboard";
+import { useDemoSalesAging } from "@/features/analytics/hooks/useDemoSalesAging";
+import {
+  scaleMoneyByAgingFactor,
+  getDemoAgingCountRatio,
+} from "@/features/analytics/utils/demoSalesAging";
 import {
   isoEndOfDay,
   isoStartOfDay,
@@ -48,6 +53,27 @@ function buildParams(filters) {
   };
 }
 
+// Deterministic PRNG helpers for the demo aging sampling (local copies so the
+// page does not depend on engine internals).
+function hashSeed(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed) {
+  let t = seed >>> 0;
+  return function next() {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), t | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export function ExecutiveFoodOpsDashboardPage() {
   const suppliersQuery = useSuppliersQuery();
   const inventoryItemsQuery = useInventoryItemsQuery(
@@ -77,6 +103,66 @@ export function ExecutiveFoodOpsDashboardPage() {
   const kpis = data?.kpis || {};
   const charts = data?.charts || {};
   const insights = data?.insights || {};
+
+  // FRONTEND-ONLY demo sales aging: each sold item shows real figures for 1h
+  // from its own creation, then drops into a 10% loop. The backend data is
+  // never modified — sales-derived money is scaled in the democlient only.
+  const aging = useDemoSalesAging();
+  const f = aging.factor;
+
+  const agedKpis = useMemo(() => {
+    const revenue = scaleMoneyByAgingFactor(kpis?.totalFoodRevenueCents, f);
+    const cost = scaleMoneyByAgingFactor(kpis?.totalIngredientCostCents, f);
+    return {
+      totalFoodRevenueCents: revenue,
+      totalIngredientCostCents: cost,
+      grossProfitCents: revenue - cost,
+      foodCostPercentage:
+        revenue > 0
+          ? (cost / revenue) * 100
+          : toNumber(kpis?.foodCostPercentage),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kpis, f]);
+
+  const agedCharts = useMemo(
+    () => ({
+      dailyRevenue: (charts?.dailyRevenue || []).map((d) => ({
+        ...d,
+        revenueCents: scaleMoneyByAgingFactor(d.revenueCents, f),
+      })),
+      dailyIngredientCost: (charts?.dailyIngredientCost || []).map((d) => ({
+        ...d,
+        ingredientCostCents: scaleMoneyByAgingFactor(d.ingredientCostCents, f),
+      })),
+      menuCategoryCounts: charts?.menuCategoryCounts,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [charts, f],
+  );
+
+  // FRONTEND-ONLY demo aging for the Top Meals table: meals stay REAL (real
+  // prices, margins, sales-derived revenue) but only ~ratio of the list is
+  // shown — randomly chosen, capped so the count reflects the demo reduction.
+  const agedTopMeals = useMemo(() => {
+    const all = insights?.topProfitableMeals || [];
+    const dayBucket = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+    const shuffled = [...all].sort((a, b) => {
+      const ra = mulberry32(
+        hashSeed(`meal:${dayBucket}:${a.recipeId ?? a.name}`),
+      )();
+      const rb = mulberry32(
+        hashSeed(`meal:${dayBucket}:${b.recipeId ?? b.name}`),
+      )();
+      return ra - rb;
+    });
+    const showCount = Math.max(
+      all.length > 0 ? 1 : 0,
+      Math.ceil(all.length * getDemoAgingCountRatio()),
+    );
+    return shuffled.slice(0, showCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insights]);
 
   const profitableColumns = useMemo(
     () => [
@@ -170,7 +256,9 @@ export function ExecutiveFoodOpsDashboardPage() {
           return (
             <StatusBadge
               status={days <= 3 ? "critical" : days <= 7 ? "warning" : "active"}
-              label={days.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+              label={days.toLocaleString(undefined, {
+                maximumFractionDigits: 1,
+              })}
             />
           );
         },
@@ -211,28 +299,28 @@ export function ExecutiveFoodOpsDashboardPage() {
       <KpiGrid cols={6}>
         <KpiCard
           label="Food revenue"
-          value={formatMoney(kpis.totalFoodRevenueCents)}
+          value={formatMoney(agedKpis.totalFoodRevenueCents)}
           icon={DollarSign}
           accent="purple"
           loading={q.isLoading}
         />
         <KpiCard
           label="Ingredient cost"
-          value={formatMoney(kpis.totalIngredientCostCents)}
+          value={formatMoney(agedKpis.totalIngredientCostCents)}
           icon={TrendingDown}
           accent="amber"
           loading={q.isLoading}
         />
         <KpiCard
           label="Food cost %"
-          value={formatPct(kpis.foodCostPercentage)}
+          value={formatPct(agedKpis.foodCostPercentage)}
           icon={Percent}
           accent="indigo"
           loading={q.isLoading}
         />
         <KpiCard
           label="Gross profit"
-          value={formatMoney(kpis.grossProfitCents)}
+          value={formatMoney(agedKpis.grossProfitCents)}
           icon={TrendingUp}
           accent="emerald"
           loading={q.isLoading}
@@ -261,8 +349,8 @@ export function ExecutiveFoodOpsDashboardPage() {
           loading={q.isLoading}
         >
           <RevenueCostTrendChart
-            dailyRevenue={charts.dailyRevenue}
-            dailyIngredientCost={charts.dailyIngredientCost}
+            dailyRevenue={agedCharts.dailyRevenue}
+            dailyIngredientCost={agedCharts.dailyIngredientCost}
           />
         </AnalyticsCard>
 
@@ -280,7 +368,7 @@ export function ExecutiveFoodOpsDashboardPage() {
         <AnalyticsCard title="Top Profitable Meals" accent="emerald">
           <DataTable
             columns={profitableColumns}
-            data={insights.topProfitableMeals || []}
+            data={agedTopMeals}
             loading={q.isLoading}
             enableSearch={false}
             pageSize={8}

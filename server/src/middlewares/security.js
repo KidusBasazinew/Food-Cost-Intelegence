@@ -6,8 +6,16 @@ import cookieParser from "cookie-parser";
 import { env } from "../config/env.js";
 
 export function securityMiddleware() {
+  const allowedOrigins = [env.CLIENT_URL, "http://localhost:5174"];
   const corsOptions = {
-    origin: env.CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Origin not allowed by CORS"));
+    },
     credentials: true,
   };
 

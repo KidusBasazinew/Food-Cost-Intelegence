@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { posService } from "@/services/pos.service";
 import { formatMoney, toNumber } from "@/features/analytics/utils/numbers";
 import {
+  applyDemoAgingToOrderRows,
+  getDemoAgingCountRatio,
+} from "@/features/analytics/utils/demoSalesAging";
+import {
   PageShell,
   PageHeader,
   AnalyticsCard,
@@ -40,6 +44,8 @@ export function PosOrderHistoryPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  // Re-render tick so sold items crossing their 1h boundary flip live.
+  const [agingTick, setAgingTick] = useState(0);
 
   async function load(nextPage = page) {
     setLoading(true);
@@ -57,7 +63,19 @@ export function PosOrderHistoryPage() {
     load(page);
   }, [page]);
 
-  const rows = data?.rows ?? [];
+  useEffect(() => {
+    const ticker = setInterval(() => setAgingTick((t) => t + 1), 30_000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  // FRONTEND-ONLY demo sales aging: fresh sold items show real figures,
+  // items older than 1h are replaced by random sold items totalling 10%.
+  const aged = useMemo(
+    () => applyDemoAgingToOrderRows(data?.rows ?? [], Date.now()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, agingTick],
+  );
+  const rows = aged.rows;
 
   // Re-usable column configuration mapping cleanly to your explicit DataTable system
   const columns = useMemo(
@@ -96,7 +114,20 @@ export function PosOrderHistoryPage() {
       {
         accessorKey: "items",
         header: "Items Count",
-        cell: ({ row }) => toNumber(row.original.items?.length ?? 0),
+        cell: ({ row }) => (
+          <span>
+            {toNumber(row.original.items?.length ?? 0)}
+            {!row.original._demoAging ? (
+              <span className="ml-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                real
+              </span>
+            ) : (
+              <span className="ml-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                demo (aged · sampled)
+              </span>
+            )}
+          </span>
+        ),
       },
       {
         accessorKey: "totalCents",
@@ -116,17 +147,21 @@ export function PosOrderHistoryPage() {
       {/* Structural Page Header Context */}
       <PageHeader
         title="POS Order History"
-        subtitle={`Audit ledger view of historically processed point-of-sale customer logs. Currently tracking ${data?.total ?? 0} total logs.`}
-        action={
-          <Button
-            variant="secondary"
-            onClick={() => load(page)}
-            className="gap-2"
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh Records
-          </Button>
+        subtitle={`Audit ledger view of historically processed point-of-sale customer logs. ${aged.freshCount} showing real figures, ${aged.sampledCount} of ${aged.agedCount} aged items displayed (demo ${Math.round(getDemoAgingCountRatio() * 100)}% count ratio).`}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => load(page)}
+              className="gap-2"
+              disabled={loading}
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh Records
+            </Button>
+          </div>
         }
       />
 

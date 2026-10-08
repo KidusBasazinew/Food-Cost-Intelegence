@@ -12,6 +12,11 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+import {
+  DEMO_AGING_WINDOW_MS,
+  getDemoAgingCountRatio,
+} from "@/features/analytics/utils/demoSalesAging";
 import {
   Select,
   SelectContent,
@@ -42,6 +47,25 @@ import {
   PageShell,
   StatusBadge,
 } from "@/components/ui/erp";
+
+function hashSeed(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function mulberry32(seed) {
+  let t = seed >>> 0;
+  return function next() {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), t | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 function toNumber(value) {
   if (value == null) return 0;
@@ -80,13 +104,78 @@ export function InventoryConsumptionDashboardPage() {
   const recipes = recipesQuery.data || [];
   const consumptions = consumptionsQuery.data || [];
 
+  // FRONTEND-ONLY demo aging: every consumption row has its own 1h timer from
+  // createdAt — fresh rows are displayed with REAL costs; aged rows are
+  // sampled (only 1 in every 1/ratio shown) so displayed totals drop to ~10%
+  // while every displayed row keeps 100% realistic prices and quantities.
+  const aged = useMemo(() => {
+    const now = Date.now();
+    const freshRows = [];
+    const agedPool = [];
+
+    for (const c of consumptions) {
+      const created = c.createdAt ? new Date(c.createdAt).getTime() : NaN;
+      const isFresh =
+        !Number.isFinite(created) || now - created < DEMO_AGING_WINDOW_MS;
+      if (isFresh) freshRows.push(c);
+      else agedPool.push(c);
+    }
+
+    const ratio = getDemoAgingCountRatio();
+    const ageSamplingSeed = Math.floor(now / (24 * 60 * 60 * 1000));
+    const sampleCount =
+      agedPool.length > 0 ? Math.max(1, Math.ceil(agedPool.length * ratio)) : 0;
+
+    // Deterministically sample aged rows (stable across refreshes).
+    const rand = mulberry32(hashSeed(`consumption:${ageSamplingSeed}`));
+    const pool = [...agedPool];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const sampled = pool.slice(0, sampleCount);
+    const sampledIds = new Set(sampled.map((c) => c.id));
+
+    const rows = [...freshRows, ...sampled];
+    return {
+      rows,
+      freshCount: freshRows.length,
+      agedCount: agedPool.length,
+      sampledCount: sampled.length,
+      // Factor = fraction of real total cost that is displayed (fresh 100% +
+      // sampled aged rows ≈ ratio of the aged total).
+      factor:
+        agedPool.length > 0
+          ? (freshRows.length + sampled.length * ratio) /
+            (freshRows.length + agedPool.length)
+          : 1,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consumptions]);
+
+  const agedReport = useMemo(
+    () => ({
+      totalCostCents: toNumber(report?.totalCostCents) * aged.factor,
+      daily: daily.map((d) => ({
+        ...d,
+        totalCostCents: toNumber(d.totalCostCents) * aged.factor,
+      })),
+      topItems: topItems.map((t) => ({
+        ...t,
+        totalCostCents: toNumber(t.totalCostCents) * aged.factor,
+      })),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [report, aged],
+  );
+
   const chartData = useMemo(
     () =>
-      daily.map((d) => ({
+      agedReport.daily.map((d) => ({
         day: d.day,
         cost: toNumber(d.totalCostCents) / 100,
       })),
-    [daily],
+    [agedReport],
   );
 
   const canConsume =
@@ -222,17 +311,19 @@ export function InventoryConsumptionDashboardPage() {
         title="Inventory Consumption"
         subtitle="Ingredient usage, spend trends, and depletion velocity."
         actions={
-          <Button className="rounded-xl" onClick={() => setDialogOpen(true)}>
-            <Zap className="mr-2 h-4 w-4" />
-            Record consumption
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button className="rounded-xl" onClick={() => setDialogOpen(true)}>
+              <Zap className="mr-2 h-4 w-4" />
+              Record consumption
+            </Button>
+          </div>
         }
       />
 
       <KpiGrid cols={3}>
         <KpiCard
           label="Total consumption cost"
-          value={formatMoney(report?.totalCostCents)}
+          value={formatMoney(agedReport.totalCostCents)}
           accent="cyan"
           loading={reportQuery.isLoading}
         />
@@ -244,8 +335,12 @@ export function InventoryConsumptionDashboardPage() {
         />
         <KpiCard
           label="Top consumed item"
-          value={topItems[0]?.name ?? "—"}
-          hint={topItems[0] ? formatMoney(topItems[0].totalCostCents) : ""}
+          value={agedReport.topItems[0]?.name ?? "—"}
+          hint={
+            agedReport.topItems[0]
+              ? formatMoney(agedReport.topItems[0].totalCostCents)
+              : ""
+          }
           accent="purple"
           loading={reportQuery.isLoading}
         />
@@ -313,7 +408,7 @@ export function InventoryConsumptionDashboardPage() {
         <AnalyticsCard title="Top consumed items" accent="indigo">
           <DataTable
             columns={topColumns}
-            data={topItems.slice(0, 10)}
+            data={agedReport.topItems.slice(0, 10)}
             loading={reportQuery.isLoading}
             enableSearch={false}
             pageSize={10}
@@ -325,7 +420,7 @@ export function InventoryConsumptionDashboardPage() {
       <AnalyticsCard title="Recent consumptions" accent="blue">
         <DataTable
           columns={recentColumns}
-          data={consumptions.slice(0, 50)}
+          data={aged.rows.slice(0, 50)}
           loading={consumptionsQuery.isLoading}
           enableSearch={false}
           pageSize={10}
